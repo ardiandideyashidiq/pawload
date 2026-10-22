@@ -134,3 +134,49 @@ items = client.list("https://gofile.io/d/yt9wik0T")
 for it in items:
     print(f"{it.name} - {it.size} bytes (MD5: {it.md5})")
 ```
+
+---
+
+## VikingFile CLI & Library
+
+A client and CLI for VikingFile upload, metadata checking, and file management.
+Entrypoints: `vikingfile` and `vf`.
+
+### VikingFile CLI Usage
+```bash
+# Configure default user hash (optional; empty string for anonymous uploads)
+vf config set -u <user_hash>
+
+# Upload a file anonymously
+vf upload ./ROM.zip
+
+# Upload to account with destination folder
+vf upload ./ROM.zip -u <user_hash> -d "ROMs/Android-14"
+
+# Check file details by URL or hash
+vf check https://vik1ngfile.site/f/QL0UByzja9
+vf check QL0UByzja9
+
+# List files in account
+vf list -u <user_hash> -p 1
+
+# Delete or rename file in account
+vf rename <hash> "new_name.zip" -u <user_hash>
+vf delete <hash> -u <user_hash>
+```
+
+### VikingFile Python Library Usage
+```python
+from vikingfile import VikingFileClient
+
+client = VikingFileClient(user="<user_hash>")
+
+# Upload
+res = client.upload("./ROM.zip")
+print(f"Uploaded: {res.url} (Hash: {res.hash})")
+
+# Check
+info = client.check("QL0UByzja9")
+if info and info.exist:
+    print(f"{info.name} ({info.size} bytes)")
+```
