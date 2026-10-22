@@ -28,10 +28,19 @@ sf config set --pick-mirror
 
 ### Download
 ```bash
-# Interactive mirror prompt + automatic MD5 verification + resume support
+# Download latest release directly from SourceForge project URL
+sf download https://sourceforge.net/projects/netmodhttp/
+
+# Download a specific file by URL
+sf download https://sourceforge.net/projects/rdndds-release/files/rom/README.md/download
+
+# Download by project name (resolves latest release)
+sf download netmodhttp
+
+# Download by remote path with project flag
 sf download rom/README.md -p rdndds-release
 
-# Specific mirror and output path with 8 parallel workers
+# Specific mirror, output path, and 8 parallel workers
 sf download rom/lineage-23.1-UNOFFICIAL.zip -p rdndds-release -o ~/Downloads/ROM.zip -m master -c 8
 ```
 

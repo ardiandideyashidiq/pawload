@@ -35,7 +35,7 @@ def cli() -> None:
 
 
 @cli.command()
-@click.argument("remote_path")
+@click.argument("target")
 @click.option("-p", "--project", help="SourceForge project name.")
 @click.option("-o", "--output", help="Destination file or directory path.")
 @click.option("-m", "--mirror", help="Mirror ID (e.g., cfhcable, delska, twds, master, autoselect).")
@@ -43,7 +43,7 @@ def cli() -> None:
 @click.option("--verify/--no-verify", default=True, help="Verify MD5 checksum against SourceForge metadata.")
 @click.option("--prompt/--no-prompt", default=True, help="Interactively prompt for mirror region if not set.")
 def download(
-    remote_path: str,
+    target: str,
     project: str | None,
     output: str | None,
     mirror: str | None,
@@ -51,11 +51,11 @@ def download(
     verify: bool,
     prompt: bool,
 ) -> None:
-    """Download a file with parallel chunks, resume support, and checksum verification."""
+    """Download a file or project release with parallel chunks, resume support, and checksum verification."""
     try:
         client = SourceForgeClient(project=project, console=console)
         dest = client.download(
-            remote_path=remote_path,
+            target=target,
             output_path=output,
             mirror=mirror,
             concurrency=concurrency,
@@ -113,6 +113,13 @@ def list_cmd(
 ) -> None:
     """List remote files and folders in project."""
     try:
+        if remote_dir.startswith(("http://", "https://")):
+            from sourceforge.mirrors import parse_target
+
+            info = parse_target(remote_dir, project=project)
+            project = info.project
+            remote_dir = info.remote_path if "/" in info.remote_path else ""
+
         use_sftp = True if sftp else (False if rss else None)
         client = SourceForgeClient(project=project, username=username, console=console)
         items = client.list(remote_dir=remote_dir, use_sftp=use_sftp)

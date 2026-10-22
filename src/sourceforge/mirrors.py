@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
 import sys
 from dataclasses import dataclass
 from typing import NamedTuple
+from urllib.parse import unquote, urlparse
 
 from curl_cffi import requests
 from rich.console import Console
@@ -66,6 +68,100 @@ class ResolvedTarget:
     accept_ranges: bool
     filename: str
     mirror_used: str
+
+
+@dataclass
+class TargetInfo:
+    project: str
+    remote_path: str
+    expected_md5: str | None = None
+
+
+def get_best_release(project: str) -> dict[str, str] | None:
+    """Fetch best/latest release metadata for a project from SourceForge."""
+    url = f"https://sourceforge.net/projects/{project}/best_release.json"
+    try:
+        resp = requests.get(url, headers={"User-Agent": CLI_USER_AGENT}, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            rel = data.get("release")
+            if rel and "filename" in rel:
+                return {
+                    "filename": rel["filename"].lstrip("/"),
+                    "md5": rel.get("md5sum"),
+                    "bytes": rel.get("bytes"),
+                }
+    except Exception:
+        pass
+    return None
+
+
+def parse_target(target: str, project: str | None = None) -> TargetInfo:
+    """
+    Parses a target string which can be:
+    - A SourceForge URL (project URL, files URL, or direct download URL)
+    - A project name (to download the latest release)
+    - A remote path within a project (when project is provided via param or config)
+    """
+    val = target.strip()
+
+    if val.startswith(("http://", "https://")):
+        parsed = urlparse(val)
+        path = parsed.path.strip("/")
+
+        # 1. /projects/<project>/files/<subpath>[/download]
+        m_files = re.match(r"^projects/([^/]+)/files/(.+?)(?:/download)?/?$", path)
+        if m_files:
+            proj = m_files.group(1)
+            r_path = unquote(m_files.group(2))
+            return TargetInfo(project=proj, remote_path=r_path)
+
+        # 2. /project/<project>/<subpath> (downloads.sourceforge.net)
+        m_dl = re.match(r"^project/([^/]+)/(.+?)/?$", path)
+        if m_dl:
+            proj = m_dl.group(1)
+            r_path = unquote(m_dl.group(2))
+            return TargetInfo(project=proj, remote_path=r_path)
+
+        # 3. /projects/<project>[/] or /p/<project>[/]
+        m_proj = re.match(r"^(?:projects|p)/([^/]+)/?$", path)
+        if m_proj:
+            proj = m_proj.group(1)
+            best = get_best_release(proj)
+            if not best:
+                raise ValueError(f"No release found for project '{proj}'")
+            return TargetInfo(
+                project=proj,
+                remote_path=best["filename"],
+                expected_md5=best.get("md5"),
+            )
+
+        raise ValueError(f"Unrecognized SourceForge URL: {val}")
+
+    if project:
+        if not val or val == project:
+            best = get_best_release(project)
+            if not best:
+                raise ValueError(f"No release found for project '{project}'")
+            return TargetInfo(
+                project=project,
+                remote_path=best["filename"],
+                expected_md5=best.get("md5"),
+            )
+        return TargetInfo(project=project, remote_path=val)
+
+    if "/" not in val:
+        best = get_best_release(val)
+        if best:
+            return TargetInfo(
+                project=val,
+                remote_path=best["filename"],
+                expected_md5=best.get("md5"),
+            )
+
+    raise ValueError(
+        f"Cannot determine SourceForge project for '{val}'. Specify -p/--project or pass a SourceForge URL."
+    )
 
 
 def prompt_mirror(console: Console | None = None) -> str:

@@ -7,7 +7,7 @@ from sourceforge.cli import format_size
 from sourceforge.client import SourceForgeClient, list_files_rss
 from sourceforge.config import Config
 from sourceforge.downloader import DownloadState, get_expected_md5
-from sourceforge.mirrors import REGIONS, resolve_download_target
+from sourceforge.mirrors import REGIONS, parse_target, resolve_download_target
 
 
 def test_format_size():
@@ -113,3 +113,22 @@ def test_client_download_and_verify():
         assert dest.is_file()
         assert dest.stat().st_size == 1119
         assert "uploader" in dest.read_text(encoding="utf-8")
+
+
+def test_parse_target_project_url():
+    info = parse_target("https://sourceforge.net/projects/netmodhttp/")
+    assert info.project == "netmodhttp"
+    assert "NetMod" in info.remote_path
+    assert info.expected_md5 == "9571130b02bae785dffc7c86e21c9027"
+
+
+def test_parse_target_file_url():
+    info = parse_target("https://sourceforge.net/projects/rdndds-release/files/rom/README.md/download")
+    assert info.project == "rdndds-release"
+    assert info.remote_path == "rom/README.md"
+
+
+def test_parse_target_bare_project():
+    info = parse_target("netmodhttp")
+    assert info.project == "netmodhttp"
+    assert "NetMod" in info.remote_path

@@ -12,7 +12,7 @@ from rich.console import Console
 
 from sourceforge.config import Config
 from sourceforge.downloader import download_file_async
-from sourceforge.mirrors import CLI_USER_AGENT
+from sourceforge.mirrors import CLI_USER_AGENT, parse_target
 from sourceforge.sftp import (
     RemoteItem,
     delete_remote_file_sftp,
@@ -139,23 +139,28 @@ class SourceForgeClient:
 
     async def download_async(
         self,
-        remote_path: str,
+        target: str | None = None,
         output_path: str | Path | None = None,
         mirror: str | None = None,
         concurrency: int | None = None,
         verify_checksum: bool = True,
         interactive_prompt: bool = True,
         progress_callback: Callable[[int, int], None] | None = None,
+        remote_path: str | None = None,
     ) -> Path:
-        project = self._require_project()
+        effective_target = target or remote_path
+        if not effective_target:
+            raise ValueError("Target URL, project name, or remote path is required.")
+        target_info = parse_target(effective_target, project=self.project)
         return await download_file_async(
-            project=project,
-            remote_path=remote_path,
+            project=target_info.project,
+            remote_path=target_info.remote_path,
             output_path=output_path,
             mirror=mirror or self.default_mirror,
             concurrency=concurrency or self.concurrency,
             chunk_size=self.chunk_size,
             verify_checksum=verify_checksum,
+            expected_md5=target_info.expected_md5,
             interactive_prompt=interactive_prompt,
             console=self.console,
             progress_callback=progress_callback,
@@ -163,23 +168,25 @@ class SourceForgeClient:
 
     def download(
         self,
-        remote_path: str,
+        target: str | None = None,
         output_path: str | Path | None = None,
         mirror: str | None = None,
         concurrency: int | None = None,
         verify_checksum: bool = True,
         interactive_prompt: bool = True,
         progress_callback: Callable[[int, int], None] | None = None,
+        remote_path: str | None = None,
     ) -> Path:
         return _run_sync(
             self.download_async(
-                remote_path=remote_path,
+                target=target,
                 output_path=output_path,
                 mirror=mirror,
                 concurrency=concurrency,
                 verify_checksum=verify_checksum,
                 interactive_prompt=interactive_prompt,
                 progress_callback=progress_callback,
+                remote_path=remote_path,
             )
         )
 

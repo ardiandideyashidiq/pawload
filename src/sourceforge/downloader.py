@@ -96,6 +96,7 @@ async def download_file_async(
     concurrency: int = 4,
     chunk_size: int = 8 * 1024 * 1024,
     verify_checksum: bool = True,
+    expected_md5: str | None = None,
     interactive_prompt: bool = True,
     console: Console | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
@@ -252,16 +253,16 @@ async def download_file_async(
     # Verify checksum if enabled
     if verify_checksum:
         with con.status("[cyan]Verifying MD5 checksum...[/cyan]"):
-            expected_md5 = get_expected_md5(project, remote_path)
-            if expected_md5:
+            md5_to_check = expected_md5 or get_expected_md5(project, remote_path)
+            if md5_to_check:
                 hasher = hashlib.md5()
                 with open(dest, "rb") as f:
                     while chunk := f.read(1024 * 1024):
                         hasher.update(chunk)
                 computed_md5 = hasher.hexdigest().lower()
-                if computed_md5 != expected_md5:
+                if computed_md5 != md5_to_check:
                     raise ValueError(
-                        f"Checksum mismatch for {dest.name}! Expected {expected_md5}, got {computed_md5}"
+                        f"Checksum mismatch for {dest.name}! Expected {md5_to_check}, got {computed_md5}"
                     )
                 con.print(f"[bold green]✓ MD5 Verified:[/bold green] {computed_md5}")
             else:
