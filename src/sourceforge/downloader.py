@@ -121,13 +121,17 @@ async def download_file_async(
     # Fallback to single stream if server does not accept ranges or total size is unknown
     if not target.accept_ranges or total_bytes <= 0:
         con.print("[yellow]Server does not support range requests; using single stream.[/yellow]")
-        async with AsyncSession() as session:
-            resp = await session.get(target.direct_url, stream=True)
-            with open(dest, "wb") as f:
-                async for chunk in resp.aiter_content():
-                    f.write(chunk)
-                    if progress_callback:
-                        progress_callback(len(chunk), total_bytes)
+        try:
+            async with AsyncSession() as session:
+                resp = await session.get(target.direct_url, stream=True)
+                with open(dest, "wb") as f:
+                    async for chunk in resp.aiter_content():
+                        f.write(chunk)
+                        if progress_callback:
+                            progress_callback(len(chunk), total_bytes)
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            con.print("\n[yellow]Download interrupted by user.[/yellow]")
+            raise KeyboardInterrupt
         return dest
 
     # Multi-part parallel download with resume
@@ -233,9 +237,17 @@ async def download_file_async(
         tasks = [asyncio.create_task(worker(w)) for w in range(concurrency)]
         try:
             await asyncio.gather(*tasks)
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            for t in tasks:
+                t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            async with state_lock:
+                state.save(sidecar_path)
+            con.print("\n[yellow]Download paused. Progress saved for resume.[/yellow]")
+            raise KeyboardInterrupt
         finally:
+            dest_file.flush()
             dest_file.close()
-
     # Clean up sidecar file upon successful completion
     if sidecar_path.is_file():
         try:
@@ -245,20 +257,23 @@ async def download_file_async(
 
     # Verify checksum if enabled
     if verify_checksum:
-        with con.status("[cyan]Verifying MD5 checksum...[/cyan]"):
-            md5_to_check = expected_md5 or get_expected_md5(project, remote_path)
-            if md5_to_check:
-                hasher = hashlib.md5()
-                with open(dest, "rb") as f:
-                    while chunk := f.read(1024 * 1024):
-                        hasher.update(chunk)
-                computed_md5 = hasher.hexdigest().lower()
-                if computed_md5 != md5_to_check:
-                    raise ValueError(
-                        f"Checksum mismatch for {dest.name}! Expected {md5_to_check}, got {computed_md5}"
-                    )
-                con.print(f"[bold green]✓ MD5 Verified:[/bold green] {computed_md5}")
-            else:
-                con.print("[dim]No remote MD5 checksum found in metadata; skipped hash check.[/dim]")
-
+        try:
+            with con.status("[cyan]Verifying MD5 checksum...[/cyan]"):
+                md5_to_check = expected_md5 or get_expected_md5(project, remote_path)
+                if md5_to_check:
+                    hasher = hashlib.md5()
+                    with open(dest, "rb") as f:
+                        while chunk := f.read(1024 * 1024):
+                            hasher.update(chunk)
+                    computed_md5 = hasher.hexdigest().lower()
+                    if computed_md5 != md5_to_check:
+                        raise ValueError(
+                            f"Checksum mismatch for {dest.name}! Expected {md5_to_check}, got {computed_md5}"
+                        )
+                    con.print(f"[bold green]✓ MD5 Verified:[/bold green] {computed_md5}")
+                else:
+                    con.print("[dim]No remote MD5 checksum found in metadata; skipped hash check.[/dim]")
+        except KeyboardInterrupt:
+            con.print("\n[yellow]Checksum verification interrupted.[/yellow]")
+            raise KeyboardInterrupt
     return dest

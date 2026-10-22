@@ -24,6 +24,14 @@ __all__ = [
 
 
 def main() -> None:
+    import sys
+
+    from rich.console import Console
+
     from sourceforge.cli import cli
 
-    cli()
+    try:
+        cli()
+    except KeyboardInterrupt:
+        Console().print("\n[yellow]Operation cancelled by user.[/yellow]")
+        sys.exit(130)

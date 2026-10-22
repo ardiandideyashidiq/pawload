@@ -189,13 +189,17 @@ def prompt_select_file(
 
     con.print(table)
 
-    choice = Prompt.ask(
-        f"Choose a file to download [1-{len(items)}]",
-        choices=[str(i) for i in range(1, len(items) + 1)],
-        default=str(default_idx),
-        show_choices=False,
-    )
-    return items[int(choice) - 1]
+    try:
+        choice = Prompt.ask(
+            f"Choose a file to download [1-{len(items)}]",
+            choices=[str(i) for i in range(1, len(items) + 1)],
+            default=str(default_idx),
+            show_choices=False,
+        )
+        return items[int(choice) - 1]
+    except KeyboardInterrupt:
+        con.print("\n[yellow]File selection cancelled.[/yellow]")
+        raise
 
 
 def prompt_mirror(
@@ -231,15 +235,23 @@ def prompt_mirror(
                 table.add_row(str(idx), f"{m.id}{note}", m.name, m.location)
 
             con.print(table)
-            choice = Prompt.ask(
-                f"Choose a mirror [1-{len(live_mirrors)}]",
-                choices=[str(i) for i in range(1, len(live_mirrors) + 1)],
-                default="1",
-                show_choices=False,
-            )
-            return live_mirrors[int(choice) - 1].id
+            try:
+                choice = Prompt.ask(
+                    f"Choose a mirror [1-{len(live_mirrors)}]",
+                    choices=[str(i) for i in range(1, len(live_mirrors) + 1)],
+                    default="1",
+                    show_choices=False,
+                )
+                return live_mirrors[int(choice) - 1].id
+            except KeyboardInterrupt:
+                con.print("\n[yellow]Mirror selection cancelled.[/yellow]")
+                raise
 
-    return Prompt.ask("Enter mirror ID", default="autoselect")
+    try:
+        return Prompt.ask("Enter mirror ID", default="autoselect")
+    except KeyboardInterrupt:
+        con.print("\n[yellow]Mirror selection cancelled.[/yellow]")
+        raise
 
 
 def resolve_download_target(

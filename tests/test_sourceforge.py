@@ -135,3 +135,18 @@ def test_fetch_live_mirrors_live():
     assert len(mirrors) >= 2
     ids = [m.id for m in mirrors]
     assert "autoselect" in ids
+
+
+def test_cli_keyboard_interrupt_handling(monkeypatch):
+    from click.testing import CliRunner
+
+    from sourceforge.cli import cli
+
+    runner = CliRunner()
+    monkeypatch.setattr(
+        "sourceforge.client.SourceForgeClient.download",
+        lambda *a, **k: (_ for _ in ()).throw(KeyboardInterrupt()),
+    )
+    result = runner.invoke(cli, ["download", "test/file.zip", "-p", "testproj"])
+    assert result.exit_code == 130
+    assert "Operation cancelled by user" in result.output

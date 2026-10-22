@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -121,11 +122,15 @@ async def upload_file_sftp(
             if progress_callback:
                 progress_callback(copied, total)
 
-        await sftp.put(
-            str(local_file),
-            target_file,
-            progress_handler=sftp_progress_handler,
-        )
+        try:
+            await sftp.put(
+                str(local_file),
+                target_file,
+                progress_handler=sftp_progress_handler,
+            )
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            con.print("\n[yellow]Upload interrupted by user.[/yellow]")
+            raise KeyboardInterrupt
 
     con.print(f"[bold green]✓ Successfully uploaded:[/bold green] {local_file.name} -> {target_file}")
     return target_file

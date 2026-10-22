@@ -13,7 +13,7 @@ from sourceforge.mirrors import prompt_mirror
 
 console = Console()
 
-click.rich_click.USE_RICH_MARKUP = True
+click.rich_click.TEXT_MARKUP = "rich"
 click.rich_click.SHOW_ARGUMENTS = True
 click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 
@@ -66,6 +66,9 @@ def download(
             latest=latest,
         )
         console.print(f"[bold green]✓ Downloaded to:[/bold green] {dest.resolve()}")
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Operation cancelled by user.[/yellow]")
+        sys.exit(130)
     except Exception as e:
         console.print(f"[bold red]Download Error:[/bold red] {e}")
         sys.exit(1)
@@ -96,6 +99,9 @@ def upload(
             interactive=True,
         )
         console.print(f"[bold green]✓ Upload complete:[/bold green] {remote_target}")
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Operation cancelled by user.[/yellow]")
+        sys.exit(130)
     except Exception as e:
         console.print(f"[bold red]Upload Error:[/bold red] {e}")
         sys.exit(1)
@@ -146,6 +152,9 @@ def list_cmd(
             table.add_row(item_type, item.name, size_str, mtime_str, md5_str)
 
         console.print(table)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Operation cancelled by user.[/yellow]")
+        sys.exit(130)
     except Exception as e:
         console.print(f"[bold red]List Error:[/bold red] {e}")
         sys.exit(1)
@@ -175,6 +184,9 @@ def delete(
     try:
         client = SourceForgeClient(project=project, username=username, key_path=key, console=console)
         client.delete(remote_path=remote_path)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Operation cancelled by user.[/yellow]")
+        sys.exit(130)
     except Exception as e:
         console.print(f"[bold red]Delete Error:[/bold red] {e}")
         sys.exit(1)
@@ -197,6 +209,9 @@ def rename(
     try:
         client = SourceForgeClient(project=project, username=username, key_path=key, console=console)
         client.rename(old_remote_path=old_path, new_remote_path=new_path)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Operation cancelled by user.[/yellow]")
+        sys.exit(130)
     except Exception as e:
         console.print(f"[bold red]Rename Error:[/bold red] {e}")
         sys.exit(1)
@@ -239,20 +254,23 @@ def config_set(
     concurrency: int | None,
     pick_mirror: bool,
 ) -> None:
-    """Update and persist default settings to config.toml."""
-    cfg = Config.load()
-    if username is not None:
-        cfg.username = username
-    if project is not None:
-        cfg.project = project
-    if key is not None:
-        cfg.key_path = key
-    if concurrency is not None:
-        cfg.concurrency = concurrency
-    if pick_mirror:
-        cfg.default_mirror = prompt_mirror(project=cfg.project or project, console=console)
-    elif mirror is not None:
-        cfg.default_mirror = mirror
+    try:
+        cfg = Config.load()
+        if username is not None:
+            cfg.username = username
+        if project is not None:
+            cfg.project = project
+        if key is not None:
+            cfg.key_path = key
+        if concurrency is not None:
+            cfg.concurrency = concurrency
+        if pick_mirror:
+            cfg.default_mirror = prompt_mirror(project=cfg.project or project, console=console)
+        elif mirror is not None:
+            cfg.default_mirror = mirror
 
-    cfg.save()
-    console.print("[bold green]✓ Configuration saved.[/bold green]")
+        cfg.save()
+        console.print("[bold green]✓ Configuration saved.[/bold green]")
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Operation cancelled by user.[/yellow]")
+        sys.exit(130)
