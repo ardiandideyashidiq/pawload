@@ -90,3 +90,47 @@ for item in items:
 # await client.download_async(...)
 # await client.upload_async(...)
 ```
+
+---
+
+## GoFile CLI & Library
+
+A client and CLI for GoFile.io upload, parallel download, and folder browsing.
+Entrypoints: `gofile` and `gf`.
+
+### GoFile CLI Usage
+```bash
+# Configure personal GoFile account token (optional; auto-creates guest account by default)
+gf config set -t <token>
+
+# Download from GoFile folder or file URL (interactive file selection)
+gf download https://gofile.io/d/yt9wik0T
+
+# Download all files in folder
+gf download https://gofile.io/d/yt9wik0T --all
+
+# Upload a file to GoFile
+gf upload ./ROM.zip
+
+# List folder contents
+gf list https://gofile.io/d/yt9wik0T
+```
+
+### GoFile Python Library Usage
+```python
+from gofile import GoFileClient
+
+client = GoFileClient()  # auto-manages token
+
+# Download
+client.download("https://gofile.io/d/yt9wik0T", output_path="downloaded_file.zip")
+
+# Upload
+res = client.upload("./ROM.zip")
+print(f"Uploaded to: {res.download_page}")
+
+# List
+items = client.list("https://gofile.io/d/yt9wik0T")
+for it in items:
+    print(f"{it.name} - {it.size} bytes (MD5: {it.md5})")
+```

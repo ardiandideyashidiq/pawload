@@ -18,10 +18,12 @@ dependencies = [
 [project.scripts]
 sourceforge = "sourceforge:main"
 sf = "sourceforge:main"
+gofile = "gofile:main"
+gf = "gofile:main"
 
 [build-system]
-requires = ["uv_build>=0.12.23,<0.13.0"]
-build-backend = "uv_build"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
@@ -31,3 +33,7 @@ dev = [
 
 [tool.ruff.lint]
 ignore = ["BLE001", "ASYNC230", "S324", "S110", "SIM115"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sourceforge", "src/gofile"]
+
