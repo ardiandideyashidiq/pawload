@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import sys
 from dataclasses import dataclass
 from typing import NamedTuple
 from urllib.parse import unquote, urlparse
@@ -68,6 +67,38 @@ class ResolvedTarget:
     accept_ranges: bool
     filename: str
     mirror_used: str
+
+
+def fetch_live_mirrors(project: str, remote_path: str) -> list[Mirror]:
+    """Fetch live available mirrors for a specific file from SourceForge."""
+    clean_path = remote_path.strip().lstrip("/")
+    url = f"https://sourceforge.net/settings/mirror_choices?projectname={project}&filename={clean_path}"
+    try:
+        resp = requests.get(url, headers={"User-Agent": CLI_USER_AGENT}, timeout=8)
+        if resp.status_code != 200:
+            return []
+
+        ul_match = re.search(r'<ul id="mirrorList">(.*?)</ul>', resp.text, re.DOTALL)
+        if not ul_match:
+            return []
+
+        pattern = re.compile(
+            r'<li id="([^"]+)">\s*<input[^>]*value="([^,"]+),([^"]*)"[^>]*>.*?<label[^>]*>([^<]+)</label>(?:\s*\(([^)]+)\))?',
+            re.DOTALL,
+        )
+        mirrors: list[Mirror] = []
+        for m in pattern.finditer(ul_match.group(1)):
+            m_id = m.group(2)
+            name = m.group(4).strip()
+            loc = (
+                m.group(5).strip()
+                if m.group(5)
+                else ("Closest mirror by GeoIP" if m_id == "autoselect" else "SourceForge Node")
+            )
+            mirrors.append(Mirror(id=m_id, name=name, location=loc))
+        return mirrors
+    except Exception:
+        return []
 
 def is_file_path(path: str) -> bool:
     if path.endswith("/download"):
@@ -208,11 +239,44 @@ def prompt_select_file(
     return items[int(choice) - 1]
 
 
-def prompt_mirror(console: Console | None = None) -> str:
-    """Interactively ask user for their preferred region and mirror."""
+def prompt_mirror(
+    project: str | None = None,
+    remote_path: str | None = None,
+    console: Console | None = None,
+) -> str:
+    """Interactively ask user for mirror choice, fetching live mirrors when available."""
     con = console or Console()
+
+    # 1. Dynamic live mirrors for the target file
+    if project and remote_path:
+        live_mirrors = fetch_live_mirrors(project, remote_path)
+        if len(live_mirrors) == 1:
+            return live_mirrors[0].id
+        if len(live_mirrors) > 1:
+            from rich.table import Table
+
+            con.print(f"\n[bold cyan]SourceForge Live Mirrors for {remote_path.split('/')[-1]}:[/bold cyan]")
+            table = Table(show_header=True, header_style="bold magenta")
+            table.add_column("#", justify="right", style="bold yellow")
+            table.add_column("Mirror ID", style="cyan")
+            table.add_column("Host / Provider", style="bold")
+            table.add_column("Location", style="green")
+
+            for idx, m in enumerate(live_mirrors, start=1):
+                note = " (Auto)" if m.id == "autoselect" else ""
+                table.add_row(str(idx), f"{m.id}{note}", m.name, m.location)
+
+            con.print(table)
+            choice = Prompt.ask(
+                f"Choose a mirror [1-{len(live_mirrors)}]",
+                choices=[str(i) for i in range(1, len(live_mirrors) + 1)],
+                default="1",
+                show_choices=False,
+            )
+            return live_mirrors[int(choice) - 1].id
+
+    # 2. Fallback to static regional prompt
     con.print("[bold cyan]SourceForge Download Mirror Selection[/bold cyan]")
-    
     region_keys = list(REGIONS.keys())
     for idx, key in enumerate(region_keys, start=1):
         reg = REGIONS[key]
@@ -253,8 +317,8 @@ def resolve_download_target(
 
     chosen_mirror = mirror
     if not chosen_mirror:
-        if interactive_prompt and sys.stdin.isatty():
-            chosen_mirror = prompt_mirror(console)
+        if interactive_prompt:
+            chosen_mirror = prompt_mirror(project=project, remote_path=clean_path, console=console)
         else:
             chosen_mirror = "autoselect"
 

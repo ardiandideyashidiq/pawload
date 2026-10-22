@@ -7,6 +7,7 @@ from sourceforge.mirrors import (
     Mirror,
     Region,
     TargetInfo,
+    fetch_live_mirrors,
     get_best_release,
     parse_target,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "RemoteItem",
     "SourceForgeClient",
     "TargetInfo",
+    "fetch_live_mirrors",
     "get_best_release",
     "parse_target",
 ]

@@ -7,7 +7,12 @@ from sourceforge.cli import format_size
 from sourceforge.client import SourceForgeClient, list_files_rss
 from sourceforge.config import Config
 from sourceforge.downloader import DownloadState, get_expected_md5
-from sourceforge.mirrors import REGIONS, parse_target, resolve_download_target
+from sourceforge.mirrors import (
+    REGIONS,
+    fetch_live_mirrors,
+    parse_target,
+    resolve_download_target,
+)
 
 
 def test_format_size():
@@ -132,3 +137,10 @@ def test_parse_target_bare_project():
     info = parse_target("netmodhttp")
     assert info.project == "netmodhttp"
     assert info.is_project_or_dir is True
+
+
+def test_fetch_live_mirrors_live():
+    mirrors = fetch_live_mirrors("netmodhttp", "Setup/NetMod_x86(Latest).exe")
+    assert len(mirrors) >= 2
+    ids = [m.id for m in mirrors]
+    assert "autoselect" in ids
