@@ -455,6 +455,13 @@ def config_set(
 
 @cli.command("web")
 @click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Increase verbosity (-v for INFO, -vv for DEBUG).",
+)
+@click.option(
     "--host", default="0.0.0.0", help="Host interface to bind (default: 0.0.0.0)."
 )
 @click.option("--port", type=int, default=8765, help="Port to bind (default: 8765).")
@@ -463,15 +470,28 @@ def config_set(
     default=True,
     help="Automatically open web browser.",
 )
-def web_cmd(host: str, port: int, open_browser: bool) -> None:
+@click.pass_context
+def web_cmd(
+    ctx: click.Context, verbose: int, host: str, port: int, open_browser: bool
+) -> None:
     """Launch MultiCloud Web Transfer Dashboard (Flask + Tailwind CSS)."""
     from web.app import run_server
 
-    run_server(host=host, port=port, open_browser=open_browser)
+    effective_verbose = verbose or (ctx.obj.get("verbose", 0) if ctx.obj else 0)
+    run_server(
+        host=host, port=port, open_browser=open_browser, verbose=effective_verbose
+    )
 
 
 @cli.command("serve")
 @click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Increase verbosity (-v for INFO, -vv for DEBUG).",
+)
+@click.option(
     "--host", default="0.0.0.0", help="Host interface to bind (default: 0.0.0.0)."
 )
 @click.option("--port", type=int, default=8765, help="Port to bind (default: 8765).")
@@ -480,15 +500,28 @@ def web_cmd(host: str, port: int, open_browser: bool) -> None:
     default=True,
     help="Automatically open web browser.",
 )
-def serve_cmd(host: str, port: int, open_browser: bool) -> None:
+@click.pass_context
+def serve_cmd(
+    ctx: click.Context, verbose: int, host: str, port: int, open_browser: bool
+) -> None:
     """Launch MultiCloud Web Transfer Dashboard (Flask + Tailwind CSS)."""
     from web.app import run_server
 
-    run_server(host=host, port=port, open_browser=open_browser)
+    effective_verbose = verbose or (ctx.obj.get("verbose", 0) if ctx.obj else 0)
+    run_server(
+        host=host, port=port, open_browser=open_browser, verbose=effective_verbose
+    )
 
 
 @cli.command("gui")
 @click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Increase verbosity (-v for INFO, -vv for DEBUG).",
+)
+@click.option(
     "--host", default="0.0.0.0", help="Host interface to bind (default: 0.0.0.0)."
 )
 @click.option("--port", type=int, default=8765, help="Port to bind (default: 8765).")
@@ -497,8 +530,14 @@ def serve_cmd(host: str, port: int, open_browser: bool) -> None:
     default=True,
     help="Automatically open web browser.",
 )
-def gui_cmd(host: str, port: int, open_browser: bool) -> None:
+@click.pass_context
+def gui_cmd(
+    ctx: click.Context, verbose: int, host: str, port: int, open_browser: bool
+) -> None:
     """Launch MultiCloud Web Transfer Dashboard (alias for sf web)."""
     from web.app import run_server
 
-    run_server(host=host, port=port, open_browser=open_browser)
+    effective_verbose = verbose or (ctx.obj.get("verbose", 0) if ctx.obj else 0)
+    run_server(
+        host=host, port=port, open_browser=open_browser, verbose=effective_verbose
+    )

@@ -204,3 +204,36 @@ def test_flask_fallback_when_dist_missing(
         resp = client.get("/")
         assert resp.status_code == 200
         assert b"MultiCloud Frontend Not Built" in resp.data
+
+
+def test_flask_upload_file_multipart(tmp_path: Path) -> None:
+    import io
+
+    bridge = WebBridge()
+    app = create_app(bridge)
+    client = app.test_client()
+
+    with patch.object(bridge, "start_upload", return_value="ul_test_123") as mock_up:
+        data = {
+            "file": (io.BytesIO(b"dummy payload"), "sample.txt"),
+            "provider": "gofile",
+            "folder_id": "test_folder",
+        }
+        resp = client.post("/api/upload", data=data, content_type="multipart/form-data")
+        assert resp.status_code == 200
+        assert resp.get_json()["transfer_id"] == "ul_test_123"
+        mock_up.assert_called_once()
+        called_kwargs = mock_up.call_args[1]
+        assert called_kwargs["provider"] == "gofile"
+        assert called_kwargs["remote_path"] == "test_folder"
+        assert "sample.txt" in called_kwargs["local_path"]
+
+
+def test_flask_verbose_logging() -> None:
+    bridge = WebBridge()
+    app = create_app(bridge, verbose=2)
+    client = app.test_client()
+
+    resp = client.get("/api/transfers")
+    assert resp.status_code == 200
+    assert isinstance(resp.get_json(), list)

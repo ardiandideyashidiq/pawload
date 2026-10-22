@@ -48,10 +48,17 @@ def cli(
     setup_logging(verbose)
 
     if ctx.invoked_subcommand is None:
-        run_server(host=host, port=port, open_browser=open_browser)
+        run_server(host=host, port=port, open_browser=open_browser, verbose=verbose)
 
 
 @cli.command("serve")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Increase verbosity (-v for INFO, -vv for DEBUG).",
+)
 @click.option(
     "--host",
     default="0.0.0.0",
@@ -68,9 +75,16 @@ def cli(
     default=True,
     help="Automatically open web browser.",
 )
-def serve_command(host: str, port: int, open_browser: bool) -> None:
+@click.pass_context
+def serve_command(
+    ctx: click.Context, verbose: int, host: str, port: int, open_browser: bool
+) -> None:
     """Launch the Flask web transfer dashboard."""
-    run_server(host=host, port=port, open_browser=open_browser)
+    effective_verbose = verbose or (ctx.obj.get("verbose", 0) if ctx.obj else 0)
+    setup_logging(effective_verbose)
+    run_server(
+        host=host, port=port, open_browser=open_browser, verbose=effective_verbose
+    )
 
 
 def main() -> None:
