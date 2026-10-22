@@ -22,6 +22,8 @@ gofile = "gofile:main"
 gf = "gofile:main"
 vikingfile = "vikingfile:main"
 vf = "vikingfile:main"
+pixeldrain = "pixeldrain:main"
+pd = "pixeldrain:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -37,5 +39,5 @@ dev = [
 ignore = ["BLE001", "ASYNC230", "S324", "S110", "SIM115"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/sourceforge", "src/gofile", "src/vikingfile"]
+packages = ["src/sourceforge", "src/gofile", "src/vikingfile", "src/pixeldrain"]
 

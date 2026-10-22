@@ -180,3 +180,52 @@ info = client.check("QL0UByzja9")
 if info and info.exist:
     print(f"{info.name} ({info.size} bytes)")
 ```
+
+---
+
+## Pixeldrain CLI & Library
+
+A client and CLI for Pixeldrain upload, parallel download, and file inspection.
+Entrypoints: `pixeldrain` and `pd`.
+
+### Pixeldrain CLI Usage
+```bash
+# Configure API key (optional for downloads/info; required for uploads/deletes)
+pd config set -k <api_key>
+
+# Download file by URL or ID (parallel chunks + automatic SHA256 verification)
+pd download https://pixeldrain.com/u/SCSZUyXG
+pd download SCSZUyXG -o ./file.zip
+
+# View file details
+pd info https://pixeldrain.com/u/SCSZUyXG
+pd info SCSZUyXG
+
+# Upload a file (requires API key)
+pd upload ./ROM.zip
+pd upload ./ROM.zip -k <api_key>
+
+# List files in album
+pd list <list_id>
+
+# Delete a file
+pd delete <file_id> -k <api_key>
+```
+
+### Pixeldrain Python Library Usage
+```python
+from pixeldrain import PixelDrainClient
+
+client = PixelDrainClient(api_key="<api_key>")
+
+# Info
+item = client.info("SCSZUyXG")
+print(f"{item.name} - {item.size} bytes (SHA256: {item.sha256_hash})")
+
+# Download
+dest = client.download("SCSZUyXG", output_path="./AGENTS.md", concurrency=4)
+
+# Upload
+res = client.upload("./ROM.zip")
+print(f"Uploaded: {res.url} (ID: {res.id})")
+```
