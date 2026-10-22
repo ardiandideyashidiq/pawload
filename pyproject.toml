@@ -1,0 +1,33 @@
+[project]
+name = "sourceforge"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "rdndds", email = "rdndds@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "asyncssh>=2.17.0",
+    "curl-cffi>=0.16.3",
+    "loguru>=0.7.3",
+    "rich>=15.0.0",
+    "rich-click>=1.9.9",
+]
+
+[project.scripts]
+sourceforge = "sourceforge:main"
+sf = "sourceforge:main"
+
+[build-system]
+requires = ["uv_build>=0.12.23,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17.1",
+]
+
+[tool.ruff.lint]
+ignore = ["BLE001", "ASYNC230", "S324", "S110", "SIM115"]
