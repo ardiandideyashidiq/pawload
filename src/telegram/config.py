@@ -1,14 +1,24 @@
 from __future__ import annotations
 
 import os
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-CONFIG_DIR = (
-    Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "telegram"
+from sourceforge.config import (
+    get_unified_config_file,
+    load_section,
+    save_section,
 )
-CONFIG_FILE = CONFIG_DIR / "config.toml"
+
+CONFIG_DIR = (
+    Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "sourceforge"
+)
+CONFIG_FILE = get_unified_config_file()
+LEGACY_CONFIG_FILE = (
+    Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    / "telegram"
+    / "config.toml"
+)
 
 
 @dataclass
@@ -21,13 +31,9 @@ class Config:
 
     @classmethod
     def load(cls) -> Config:
-        data: dict = {}
-        if CONFIG_FILE.is_file():
-            try:
-                with open(CONFIG_FILE, "rb") as f:
-                    data = tomllib.load(f)
-            except (OSError, tomllib.TOMLDecodeError):
-                pass
+        data = load_section(
+            "telegram", config_file=CONFIG_FILE, legacy_file=LEGACY_CONFIG_FILE
+        )
 
         bot_token = (
             os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -60,19 +66,17 @@ class Config:
         )
 
     def save(self) -> None:
-        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        lines = []
-        if self.bot_token:
-            lines.append(f'bot_token = "{self.bot_token}"')
-        if self.chat_id:
-            lines.append(f'chat_id = "{self.chat_id}"')
-        if self.thread_id is not None:
-            lines.append(f"thread_id = {self.thread_id}")
-        lines.append(f"throttle_interval = {self.throttle_interval}")
-        lines.append(f'parse_mode = "{self.parse_mode}"')
-
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
+        save_section(
+            "telegram",
+            {
+                "bot_token": self.bot_token,
+                "chat_id": self.chat_id,
+                "thread_id": self.thread_id,
+                "throttle_interval": self.throttle_interval,
+                "parse_mode": self.parse_mode,
+            },
+            config_file=CONFIG_FILE,
+        )
 
 
 def setup_logging(verbose: int = 0) -> None:

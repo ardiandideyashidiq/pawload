@@ -18,12 +18,48 @@ Entrypoint is available as both `sourceforge` and `sf`.
 
 ### Configuration
 ```bash
-# View configuration
+# View SourceForge configuration or all configured services
 sf config show
+sf config show --all
+
+# Print path to active unified config file (~/.config/sourceforge/config.toml)
+sf config path
 
 # Set default project, username, or mirror
 sf config set -p <project> -u <username> -k ~/.ssh/id_ed25519
 sf config set --pick-mirror
+```
+
+### Unified Configuration File
+All CLI tools (`sf`, `gf`, `vf`, `pd`, `tg`) can be configured in a single unified TOML file located at `~/.config/sourceforge/config.toml` (or `~/.config/scraper/config.toml`, or overridden via `SCRAPER_CONFIG` / `MULTICLOUD_CONFIG` / `CONFIG_FILE` environment variable):
+
+```toml
+# Shared settings
+[global]
+concurrency = 4
+chunk_size = 8388608
+
+[sourceforge]
+project = "my-project"
+username = "my-username"
+key_path = "~/.ssh/id_ed25519"
+default_mirror = "master"
+
+[gofile]
+token = "my-gofile-token"
+
+[vikingfile]
+user = "my-vikingfile-user-hash"
+
+[pixeldrain]
+api_key = "my-pixeldrain-api-key"
+
+[telegram]
+bot_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+chat_id = "-100123456789"
+thread_id = 42
+throttle_interval = 2.0
+parse_mode = "HTML"
 ```
 
 ### Download

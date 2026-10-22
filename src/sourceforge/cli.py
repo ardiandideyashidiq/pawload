@@ -7,6 +7,7 @@ import rich_click as click
 from rich.console import Console
 from rich.table import Table
 
+import sourceforge.config as sf_cfg
 from sourceforge.client import SourceForgeClient
 from sourceforge.config import Config, format_size, setup_logging
 from sourceforge.mirrors import prompt_mirror
@@ -362,10 +363,37 @@ def config() -> None:
 
 
 @config.command(name="show")
-def config_show() -> None:
+@click.option(
+    "--all",
+    "-a",
+    "show_all",
+    is_flag=True,
+    help="Display all configured services in unified config.",
+)
+def config_show(show_all: bool) -> None:
     """Show current configuration settings."""
+    console.print(f"[dim]Config file: {sf_cfg.CONFIG_FILE}[/dim]")
+    if show_all:
+        all_sec = sf_cfg.load_all_sections(config_file=sf_cfg.CONFIG_FILE)
+        if not all_sec:
+            console.print(
+                "[yellow]Unified configuration file is empty or not created yet.[/yellow]"
+            )
+            return
+        for sec_name, sec_data in all_sec.items():
+            table = Table(title=f"Configuration: {sec_name}", show_header=True)
+            table.add_column("Key", style="bold cyan")
+            table.add_column("Value", style="yellow")
+            if isinstance(sec_data, dict):
+                for k, v in sec_data.items():
+                    table.add_row(k, str(v))
+            else:
+                table.add_row(sec_name, str(sec_data))
+            console.print(table)
+        return
+
     cfg = Config.load()
-    table = Table(title="SourceForge Local Configuration")
+    table = Table(title="SourceForge Configuration")
     table.add_column("Setting", style="bold cyan")
     table.add_column("Value", style="yellow")
 
@@ -376,6 +404,12 @@ def config_show() -> None:
     table.add_row("Concurrency", str(cfg.concurrency))
     table.add_row("Chunk Size", format_size(cfg.chunk_size))
     console.print(table)
+
+
+@config.command(name="path")
+def config_path() -> None:
+    """Print active configuration file path."""
+    console.print(str(sf_cfg.CONFIG_FILE))
 
 
 @config.command(name="set")

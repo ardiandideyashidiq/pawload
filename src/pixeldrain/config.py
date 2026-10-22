@@ -1,14 +1,24 @@
 from __future__ import annotations
 
 import os
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-CONFIG_DIR = (
-    Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "pixeldrain"
+from sourceforge.config import (
+    get_unified_config_file,
+    load_section,
+    save_section,
 )
-CONFIG_FILE = CONFIG_DIR / "config.toml"
+
+CONFIG_DIR = (
+    Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "sourceforge"
+)
+CONFIG_FILE = get_unified_config_file()
+LEGACY_CONFIG_FILE = (
+    Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    / "pixeldrain"
+    / "config.toml"
+)
 
 
 @dataclass
@@ -19,13 +29,9 @@ class Config:
 
     @classmethod
     def load(cls) -> Config:
-        data: dict = {}
-        if CONFIG_FILE.is_file():
-            try:
-                with open(CONFIG_FILE, "rb") as f:
-                    data = tomllib.load(f)
-            except (OSError, tomllib.TOMLDecodeError):
-                pass
+        data = load_section(
+            "pixeldrain", config_file=CONFIG_FILE, legacy_file=LEGACY_CONFIG_FILE
+        )
 
         api_key = (
             os.environ.get("PIXELDRAIN_API_KEY")
@@ -48,15 +54,15 @@ class Config:
         )
 
     def save(self) -> None:
-        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        lines = []
-        if self.api_key:
-            lines.append(f'api_key = "{self.api_key}"')
-        lines.append(f"concurrency = {self.concurrency}")
-        lines.append(f"chunk_size = {self.chunk_size}")
-
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines) + "\n")
+        save_section(
+            "pixeldrain",
+            {
+                "api_key": self.api_key,
+                "concurrency": self.concurrency,
+                "chunk_size": self.chunk_size,
+            },
+            config_file=CONFIG_FILE,
+        )
 
 
 def format_size(bytes_val: int) -> str:
