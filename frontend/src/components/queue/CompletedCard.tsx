@@ -1,4 +1,4 @@
-import { CheckCircle2, FolderOpen, XCircle } from 'lucide-react'
+import { CheckCircle2, FolderOpen, Info, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -7,6 +7,7 @@ import type { TransferRecord } from '@/types/transfer'
 interface CompletedCardProps {
   transfer: TransferRecord
   onOpen: (id: string) => void
+  onSelect?: (transfer: TransferRecord) => void
 }
 
 function formatBytes(bytes?: number | null): string {
@@ -21,7 +22,9 @@ function formatBytes(bytes?: number | null): string {
   return `${size.toFixed(1)} ${units[unitIndex]}`
 }
 
-function getProviderVariant(provider: string): 'sourceforge' | 'gofile' | 'vikingfile' | 'pixeldrain' | 'default' {
+function getProviderVariant(
+  provider: string
+): 'sourceforge' | 'gofile' | 'vikingfile' | 'pixeldrain' | 'default' {
   const p = provider.toLowerCase()
   if (p === 'sourceforge' || p === 'gofile' || p === 'vikingfile' || p === 'pixeldrain') {
     return p
@@ -29,13 +32,13 @@ function getProviderVariant(provider: string): 'sourceforge' | 'gofile' | 'vikin
   return 'default'
 }
 
-export function CompletedCard({ transfer, onOpen }: CompletedCardProps) {
+export function CompletedCard({ transfer, onOpen, onSelect }: CompletedCardProps) {
   const isSuccess = transfer.status === 'completed'
   const isError = transfer.status === 'error'
   const isCancelled = transfer.status === 'cancelled'
 
   return (
-    <Card className="border-border bg-card/40 hover:bg-card/70 transition-colors">
+    <Card className="border-border bg-card/50 hover:bg-card/80 transition-colors">
       <CardContent className="p-3 flex items-center justify-between gap-3">
         <div className="flex items-center space-x-3 min-w-0">
           {isSuccess && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
@@ -47,7 +50,11 @@ export function CompletedCard({ transfer, onOpen }: CompletedCardProps) {
               <Badge variant={getProviderVariant(transfer.provider)}>
                 {transfer.provider}
               </Badge>
-              <span className="text-xs font-semibold text-foreground truncate max-w-sm" title={transfer.name}>
+              <span
+                onClick={() => onSelect?.(transfer)}
+                className="text-xs font-semibold text-foreground truncate max-w-sm cursor-pointer hover:text-primary transition-colors"
+                title={transfer.name}
+              >
                 {transfer.name}
               </span>
             </div>
@@ -62,6 +69,17 @@ export function CompletedCard({ transfer, onOpen }: CompletedCardProps) {
         </div>
 
         <div className="flex items-center space-x-2 shrink-0">
+          {onSelect && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onSelect(transfer)}
+              title="View details"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            >
+              <Info className="w-3.5 h-3.5" />
+            </Button>
+          )}
           {isSuccess && transfer.dest_path && (
             <Button
               variant="outline"
