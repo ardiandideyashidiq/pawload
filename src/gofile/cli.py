@@ -9,6 +9,7 @@ from rich.table import Table
 
 from gofile.client import GoFileClient
 from gofile.config import Config, format_size, setup_logging
+from telegram.reporter import create_reporter
 
 console = Console()
 
@@ -18,7 +19,13 @@ click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def cli(ctx: click.Context, verbose: int) -> None:
     """GoFile CLI: Upload, download, and manage GoFile.io files."""
@@ -31,11 +38,37 @@ def cli(ctx: click.Context, verbose: int) -> None:
 @click.argument("target")
 @click.option("-o", "--output", help="Destination file or directory path.")
 @click.option("-p", "--password", help="Password for protected folders/files.")
-@click.option("-t", "--token", help="GoFile account token (uses guest account if omitted).")
-@click.option("-c", "--concurrency", type=int, default=None, help="Number of concurrent chunk workers.")
-@click.option("--all", "download_all", is_flag=True, help="Download all files in the folder.")
-@click.option("--verify/--no-verify", default=True, help="Verify MD5 checksum against GoFile metadata.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-t", "--token", help="GoFile account token (uses guest account if omitted)."
+)
+@click.option(
+    "-c",
+    "--concurrency",
+    type=int,
+    default=None,
+    help="Number of concurrent chunk workers.",
+)
+@click.option(
+    "--all", "download_all", is_flag=True, help="Download all files in the folder."
+)
+@click.option(
+    "--verify/--no-verify",
+    default=True,
+    help="Verify MD5 checksum against GoFile metadata.",
+)
+@click.option(
+    "-n",
+    "--notify",
+    is_flag=True,
+    help="Stream progress and send completion alert to Telegram.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def download(
     ctx: click.Context,
@@ -46,11 +79,18 @@ def download(
     concurrency: int | None,
     download_all: bool,
     verify: bool,
+    notify: bool,
     verbose: int,
 ) -> None:
     """Download a file or folder from GoFile with parallel chunks and resume support."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
+    reporter = (
+        create_reporter(title=f"GoFile: {target}", target_name="GoFile")
+        if notify
+        else None
+    )
+    cb = (lambda delta, tot: reporter.advance(delta, tot)) if reporter else None
     try:
         client = GoFileClient(token=token, concurrency=concurrency, console=console)
         dest = client.download(
@@ -61,15 +101,26 @@ def download(
             verify_checksum=verify,
             interactive=True,
             download_all=download_all,
+            progress_callback=cb,
         )
+        if reporter:
+            reporter.finish(
+                success_url=f"Downloaded {len(dest) if isinstance(dest, list) else 1} file(s)"
+            )
         if isinstance(dest, list):
-            console.print(f"[bold green]✓ Downloaded {len(dest)} files to:[/bold green] {output or target}")
+            console.print(
+                f"[bold green]✓ Downloaded {len(dest)} files to:[/bold green] {output or target}"
+            )
         else:
             console.print(f"[bold green]✓ Downloaded to:[/bold green] {dest.resolve()}")
     except KeyboardInterrupt:
+        if reporter:
+            reporter.finish(error="Cancelled by user")
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)
     except Exception as e:
+        if reporter:
+            reporter.finish(error=str(e))
         console.print(f"[bold red]Download Error:[/bold red] {e}")
         sys.exit(1)
 
@@ -78,26 +129,55 @@ def download(
 @click.argument("file", type=click.Path(exists=True, path_type=Path))
 @click.option("-f", "--folder-id", help="Destination folder ID on GoFile.")
 @click.option("-t", "--token", help="GoFile account token.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-n",
+    "--notify",
+    is_flag=True,
+    help="Stream progress and send completion alert to Telegram.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def upload(
     ctx: click.Context,
     file: Path,
     folder_id: str | None,
     token: str | None,
+    notify: bool,
     verbose: int,
 ) -> None:
     """Upload a file to GoFile with real-time streaming progress."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
+    reporter = (
+        create_reporter(title=f"GoFile: {file.name}", target_name="GoFile")
+        if notify
+        else None
+    )
+    cb = (lambda copied, tot: reporter.update(copied, tot)) if reporter else None
     try:
         client = GoFileClient(token=token, console=console)
-        result = client.upload(file_path=file, folder_id=folder_id)
-        console.print(f"[bold green]Download Page:[/bold green] [link={result.download_page}]{result.download_page}[/link]")
+        result = client.upload(
+            file_path=file, folder_id=folder_id, progress_callback=cb
+        )
+        if reporter:
+            reporter.finish(success_url=result.download_page)
+        console.print(
+            f"[bold green]Download Page:[/bold green] [link={result.download_page}]{result.download_page}[/link]"
+        )
     except KeyboardInterrupt:
+        if reporter:
+            reporter.finish(error="Cancelled by user")
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)
     except Exception as e:
+        if reporter:
+            reporter.finish(error=str(e))
         console.print(f"[bold red]Upload Error:[/bold red] {e}")
         sys.exit(1)
 
@@ -106,7 +186,13 @@ def upload(
 @click.argument("target")
 @click.option("-p", "--password", help="Password for protected folders/files.")
 @click.option("-t", "--token", help="GoFile account token.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
@@ -136,7 +222,11 @@ def list_cmd(
         for item in items:
             item_type = "[blue]DIR[/blue]" if item.is_dir else "[white]FILE[/white]"
             size_str = "-" if item.is_dir else format_size(item.size)
-            mtime_str = item.modified_time.strftime("%Y-%m-%d %H:%M:%S") if item.modified_time else "-"
+            mtime_str = (
+                item.modified_time.strftime("%Y-%m-%d %H:%M:%S")
+                if item.modified_time
+                else "-"
+            )
             md5_str = item.md5 or "-"
             table.add_row(item_type, item.name, size_str, mtime_str, md5_str)
 

@@ -9,6 +9,7 @@ from rich.table import Table
 
 from pixeldrain.client import PixelDrainClient
 from pixeldrain.config import Config, format_size, setup_logging
+from telegram.reporter import create_reporter
 
 console = Console()
 
@@ -18,7 +19,13 @@ click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def cli(ctx: click.Context, verbose: int) -> None:
     """Pixeldrain CLI: Upload, download, check, and manage Pixeldrain files."""
@@ -31,9 +38,31 @@ def cli(ctx: click.Context, verbose: int) -> None:
 @click.argument("target")
 @click.option("-o", "--output", help="Destination file path.")
 @click.option("-k", "--key", help="Pixeldrain API key.")
-@click.option("-c", "--concurrency", type=int, default=None, help="Number of concurrent chunk workers.")
-@click.option("--verify/--no-verify", default=True, help="Verify SHA256 checksum against Pixeldrain metadata.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-c",
+    "--concurrency",
+    type=int,
+    default=None,
+    help="Number of concurrent chunk workers.",
+)
+@click.option(
+    "--verify/--no-verify",
+    default=True,
+    help="Verify SHA256 checksum against Pixeldrain metadata.",
+)
+@click.option(
+    "-n",
+    "--notify",
+    is_flag=True,
+    help="Stream progress and send completion alert to Telegram.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def download(
     ctx: click.Context,
@@ -42,11 +71,18 @@ def download(
     key: str | None,
     concurrency: int | None,
     verify: bool,
+    notify: bool,
     verbose: int,
 ) -> None:
     """Download a file from Pixeldrain with parallel chunks and SHA256 verification."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
+    reporter = (
+        create_reporter(title=f"Pixeldrain: {target}", target_name="Pixeldrain")
+        if notify
+        else None
+    )
+    cb = (lambda delta, tot: reporter.advance(delta, tot)) if reporter else None
     try:
         client = PixelDrainClient(api_key=key, concurrency=concurrency, console=console)
         dest = client.download(
@@ -54,12 +90,19 @@ def download(
             output_path=output,
             concurrency=concurrency,
             verify_checksum=verify,
+            progress_callback=cb,
         )
+        if reporter:
+            reporter.finish(success_url=f"Downloaded {dest.name}")
         console.print(f"[bold green]✓ Downloaded to:[/bold green] {dest.resolve()}")
     except KeyboardInterrupt:
+        if reporter:
+            reporter.finish(error="Cancelled by user")
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)
     except Exception as e:
+        if reporter:
+            reporter.finish(error=str(e))
         console.print(f"[bold red]Download Error:[/bold red] {e}")
         sys.exit(1)
 
@@ -67,26 +110,52 @@ def download(
 @cli.command()
 @click.argument("file", type=click.Path(exists=True, path_type=Path))
 @click.option("-k", "--key", help="Pixeldrain API key.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-n",
+    "--notify",
+    is_flag=True,
+    help="Stream progress and send completion alert to Telegram.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def upload(
     ctx: click.Context,
     file: Path,
     key: str | None,
+    notify: bool,
     verbose: int,
 ) -> None:
     """Upload a file to Pixeldrain."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
+    reporter = (
+        create_reporter(title=f"Pixeldrain: {file.name}", target_name="Pixeldrain")
+        if notify
+        else None
+    )
     try:
         client = PixelDrainClient(api_key=key, console=console)
         res = client.upload(file_path=file)
-        console.print(f"[bold green]Share URL:[/bold green] [link={res.url}]{res.url}[/link]")
+        if reporter:
+            reporter.finish(success_url=res.url)
+        console.print(
+            f"[bold green]Share URL:[/bold green] [link={res.url}]{res.url}[/link]"
+        )
         console.print(f"[dim]File ID: {res.id} ({format_size(res.size)})[/dim]")
     except KeyboardInterrupt:
+        if reporter:
+            reporter.finish(error="Cancelled by user")
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)
     except Exception as e:
+        if reporter:
+            reporter.finish(error=str(e))
         console.print(f"[bold red]Upload Error:[/bold red] {e}")
         sys.exit(1)
 
@@ -94,7 +163,13 @@ def upload(
 @cli.command()
 @click.argument("target")
 @click.option("-k", "--key", help="Pixeldrain API key.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def info(
     ctx: click.Context,
@@ -109,7 +184,9 @@ def info(
         client = PixelDrainClient(api_key=key, console=console)
         item = client.info(target=target)
         if not item:
-            console.print(f"[bold red]File '{target}' not found on Pixeldrain.[/bold red]")
+            console.print(
+                f"[bold red]File '{target}' not found on Pixeldrain.[/bold red]"
+            )
             sys.exit(1)
 
         table = Table(title="Pixeldrain File Details")
@@ -137,7 +214,13 @@ def info(
 @cli.command(name="list")
 @click.argument("list_id")
 @click.option("-k", "--key", help="Pixeldrain API key.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
@@ -163,7 +246,9 @@ def list_cmd(
         table.add_column("SHA256", style="dim")
 
         for item in items:
-            table.add_row(item.id, item.name, format_size(item.size), item.sha256_hash or "-")
+            table.add_row(
+                item.id, item.name, format_size(item.size), item.sha256_hash or "-"
+            )
 
         console.print(table)
     except KeyboardInterrupt:
@@ -187,7 +272,9 @@ def delete(
     if not force:
         from rich.prompt import Confirm
 
-        if not Confirm.ask(f"[yellow]Are you sure you want to delete file '{target}'?[/yellow]"):
+        if not Confirm.ask(
+            f"[yellow]Are you sure you want to delete file '{target}'?[/yellow]"
+        ):
             console.print("[yellow]Cancelled.[/yellow]")
             return
 
@@ -195,7 +282,9 @@ def delete(
         client = PixelDrainClient(api_key=key, console=console)
         ok = client.delete(target=target)
         if ok:
-            console.print(f"[bold green]✓ File '{target}' deleted successfully.[/bold green]")
+            console.print(
+                f"[bold green]✓ File '{target}' deleted successfully.[/bold green]"
+            )
         else:
             console.print(f"[bold red]Failed to delete '{target}'.[/bold red]")
             sys.exit(1)

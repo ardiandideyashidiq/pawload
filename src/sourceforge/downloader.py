@@ -103,7 +103,12 @@ async def download_file_async(
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> Path:
     con = console or Console()
-    logger.info("Resolving download target: {}/{} (mirror={})", project, remote_path, mirror or "auto")
+    logger.info(
+        "Resolving download target: {}/{} (mirror={})",
+        project,
+        remote_path,
+        mirror or "auto",
+    )
     target = resolve_download_target(
         project=project,
         remote_path=remote_path,
@@ -111,7 +116,12 @@ async def download_file_async(
         interactive_prompt=interactive_prompt,
         console=con,
     )
-    logger.info("Target URL resolved: {} (size={} bytes, ranges={})", target.direct_url, target.content_length, target.accept_ranges)
+    logger.info(
+        "Target URL resolved: {} (size={} bytes, ranges={})",
+        target.direct_url,
+        target.content_length,
+        target.accept_ranges,
+    )
 
     dest = Path(output_path) if output_path else Path(target.filename)
     if dest.is_dir():
@@ -123,7 +133,9 @@ async def download_file_async(
 
     # Fallback to single stream if server does not accept ranges or total size is unknown
     if not target.accept_ranges or total_bytes <= 0:
-        con.print("[yellow]Server does not support range requests; using single stream.[/yellow]")
+        con.print(
+            "[yellow]Server does not support range requests; using single stream.[/yellow]"
+        )
         try:
             async with AsyncSession() as session:
                 resp = await session.get(target.direct_url, stream=True)
@@ -142,12 +154,16 @@ async def download_file_async(
     completed_chunks_set = set()
     if state and state.url == target.direct_url and state.total_bytes == total_bytes:
         completed_chunks_set = set(state.completed_chunks)
-        con.print(f"[green]Resuming download ({len(completed_chunks_set)} chunks completed)[/green]")
+        con.print(
+            f"[green]Resuming download ({len(completed_chunks_set)} chunks completed)[/green]"
+        )
         dest_file = open(dest, "r+b")
     else:
         dest_file = open(dest, "wb")
         dest_file.truncate(total_bytes)
-        state = DownloadState(url=target.direct_url, total_bytes=total_bytes, chunk_size=chunk_size)
+        state = DownloadState(
+            url=target.direct_url, total_bytes=total_bytes, chunk_size=chunk_size
+        )
 
     # Compute chunk slices
     chunks: list[tuple[int, int, int]] = []
@@ -164,7 +180,7 @@ async def download_file_async(
     already_done_bytes = 0
     for i, start, end in chunks:
         if i in completed_chunks_set:
-            already_done_bytes += (end - start + 1)
+            already_done_bytes += end - start + 1
         else:
             queue.put_nowait((i, start, end))
 
@@ -184,7 +200,13 @@ async def download_file_async(
             name="Overall",
         )
         worker_tasks = [
-            progress.add_task(f"Worker {w+1}", total=0, completed=0, visible=False, name=f"Worker {w+1}")
+            progress.add_task(
+                f"Worker {w + 1}",
+                total=0,
+                completed=0,
+                visible=False,
+                name=f"Worker {w + 1}",
+            )
             for w in range(concurrency)
         ]
 
@@ -198,7 +220,13 @@ async def download_file_async(
                         break
 
                     chunk_len = end - start + 1
-                    logger.debug("Worker {} downloading chunk {}: bytes {}-{}", worker_id + 1, chunk_idx, start, end)
+                    logger.debug(
+                        "Worker {} downloading chunk {}: bytes {}-{}",
+                        worker_id + 1,
+                        chunk_idx,
+                        start,
+                        end,
+                    )
                     progress.update(w_task, total=chunk_len, completed=0, visible=True)
 
                     headers = {"Range": f"bytes={start}-{end}"}
@@ -206,7 +234,9 @@ async def download_file_async(
                     max_retries = 3
                     for attempt in range(max_retries):
                         try:
-                            resp = await session.get(target.direct_url, headers=headers, stream=True)
+                            resp = await session.get(
+                                target.direct_url, headers=headers, stream=True
+                            )
                             if resp.status_code not in (200, 206):
                                 raise RuntimeError(f"HTTP {resp.status_code}")
 
@@ -227,7 +257,9 @@ async def download_file_async(
                                 state.completed_chunks.append(chunk_idx)
                                 state.save(sidecar_path)
 
-                            logger.debug("Worker {} completed chunk {}", worker_id + 1, chunk_idx)
+                            logger.debug(
+                                "Worker {} completed chunk {}", worker_id + 1, chunk_idx
+                            )
                             progress.update(w_task, visible=False)
                             queue.task_done()
                             break
@@ -235,7 +267,9 @@ async def download_file_async(
                             if attempt == max_retries - 1:
                                 progress.update(w_task, visible=False)
                                 queue.task_done()
-                                con.print(f"[red]Worker {worker_id+1} failed chunk {chunk_idx}: {e}[/red]")
+                                con.print(
+                                    f"[red]Worker {worker_id + 1} failed chunk {chunk_idx}: {e}[/red]"
+                                )
                                 raise
                             await asyncio.sleep(1.0)
 
@@ -277,9 +311,13 @@ async def download_file_async(
                             f"Checksum mismatch for {dest.name}! Expected {md5_to_check}, got {computed_md5}"
                         )
                     logger.info("MD5 verified successfully: {}", computed_md5)
-                    con.print(f"[bold green]✓ MD5 Verified:[/bold green] {computed_md5}")
+                    con.print(
+                        f"[bold green]✓ MD5 Verified:[/bold green] {computed_md5}"
+                    )
                 else:
-                    con.print("[dim]No remote MD5 checksum found in metadata; skipped hash check.[/dim]")
+                    con.print(
+                        "[dim]No remote MD5 checksum found in metadata; skipped hash check.[/dim]"
+                    )
         except KeyboardInterrupt:
             con.print("\n[yellow]Checksum verification interrupted.[/yellow]")
             raise KeyboardInterrupt

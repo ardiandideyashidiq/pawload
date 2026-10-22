@@ -5,7 +5,9 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "sourceforge"
+CONFIG_DIR = (
+    Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "sourceforge"
+)
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 
 
@@ -29,13 +31,27 @@ class Config:
             except (OSError, tomllib.TOMLDecodeError):
                 pass
 
-        username = os.environ.get("SF_USERNAME") or os.environ.get("SF_USER") or data.get("username")
+        username = (
+            os.environ.get("SF_USERNAME")
+            or os.environ.get("SF_USER")
+            or data.get("username")
+        )
         project = os.environ.get("SF_PROJECT") or data.get("project")
-        key_path = os.environ.get("SF_KEY_PATH") or os.environ.get("SF_KEY") or data.get("key_path")
+        key_path = (
+            os.environ.get("SF_KEY_PATH")
+            or os.environ.get("SF_KEY")
+            or data.get("key_path")
+        )
         password = os.environ.get("SF_PASSWORD") or data.get("password")
-        default_mirror = os.environ.get("SF_DEFAULT_MIRROR") or os.environ.get("SF_MIRROR") or data.get("default_mirror")
+        default_mirror = (
+            os.environ.get("SF_DEFAULT_MIRROR")
+            or os.environ.get("SF_MIRROR")
+            or data.get("default_mirror")
+        )
         concurrency = int(os.environ.get("SF_CONCURRENCY", data.get("concurrency", 4)))
-        chunk_size = int(os.environ.get("SF_CHUNK_SIZE", data.get("chunk_size", 8 * 1024 * 1024)))
+        chunk_size = int(
+            os.environ.get("SF_CHUNK_SIZE", data.get("chunk_size", 8 * 1024 * 1024))
+        )
 
         # Default SSH key auto-discovery if key_path not provided
         if not key_path and not password:

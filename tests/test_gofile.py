@@ -19,7 +19,10 @@ def test_get_content_id():
     assert get_content_id("https://gofile.io/d/yt9wik0T") == "yt9wik0T"
     assert get_content_id("https://gofile.io/d/yt9wik0T/") == "yt9wik0T"
     assert get_content_id("yt9wik0T") == "yt9wik0T"
-    assert get_content_id("https://gofile.io/d/c3b7f793-f120-4dd2-abd3-91eea5914d4a") == "c3b7f793-f120-4dd2-abd3-91eea5914d4a"
+    assert (
+        get_content_id("https://gofile.io/d/c3b7f793-f120-4dd2-abd3-91eea5914d4a")
+        == "c3b7f793-f120-4dd2-abd3-91eea5914d4a"
+    )
 
 
 def test_generate_website_token():

@@ -62,7 +62,10 @@ def test_pixeldrain_get_file_info_live():
     assert info.id == "SCSZUyXG"
     assert info.name == "AGENTS.md"
     assert info.size == 6508
-    assert info.sha256_hash == "fdb61972e4dbcd40cc57476b05cbc54b73a8b2032963831abda6a9147cb38db2"
+    assert (
+        info.sha256_hash
+        == "fdb61972e4dbcd40cc57476b05cbc54b73a8b2032963831abda6a9147cb38db2"
+    )
     assert info.can_download is True
 
 
@@ -70,7 +73,9 @@ def test_pixeldrain_download_and_verify_live():
     with tempfile.TemporaryDirectory() as tmpdir:
         client = PixelDrainClient()
         dest_path = Path(tmpdir) / "test_agents.md"
-        dest = client.download("SCSZUyXG", output_path=dest_path, concurrency=2, verify_checksum=True)
+        dest = client.download(
+            "SCSZUyXG", output_path=dest_path, concurrency=2, verify_checksum=True
+        )
         assert dest.is_file()
         assert dest.stat().st_size == 6508
         text = dest.read_text(encoding="utf-8")
@@ -93,12 +98,17 @@ def test_pixeldrain_cli_info_live():
     assert result.exit_code == 0
     assert "AGENTS.md" in result.output
     assert "SCSZUyXG" in result.output
-    assert "fdb61972e4dbcd40cc57476b05cbc54b73a8b2032963831abda6a9147cb38db2" in result.output
+    assert (
+        "fdb61972e4dbcd40cc57476b05cbc54b73a8b2032963831abda6a9147cb38db2"
+        in result.output
+    )
 
 
 def test_pixeldrain_cli_interrupt():
     runner = CliRunner()
-    with patch("pixeldrain.client.PixelDrainClient.download", side_effect=KeyboardInterrupt):
+    with patch(
+        "pixeldrain.client.PixelDrainClient.download", side_effect=KeyboardInterrupt
+    ):
         result = runner.invoke(cli, ["download", "SCSZUyXG"])
         assert result.exit_code == 130
         assert "Operation cancelled by user" in result.output

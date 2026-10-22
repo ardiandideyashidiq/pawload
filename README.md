@@ -76,7 +76,9 @@ from sourceforge import SourceForgeClient
 client = SourceForgeClient(project="rdndds-release", username="rdndds")
 
 # Download (with parallel chunks and checksum validation)
-client.download("rom/README.md", output_path="README.md", mirror="master", concurrency=4)
+client.download(
+    "rom/README.md", output_path="README.md", mirror="master", concurrency=4
+)
 
 # Upload via SFTP
 client.upload("ROM.zip", remote_dir="rom", force=True)
@@ -228,4 +230,48 @@ dest = client.download("SCSZUyXG", output_path="./AGENTS.md", concurrency=4)
 # Upload
 res = client.upload("./ROM.zip")
 print(f"Uploaded: {res.url} (ID: {res.id})")
+```
+
+---
+
+## Telegram CLI & Library
+
+A client and CLI for Telegram notifications, live progress streaming (`editMessageText`), and interactive multi-cloud bot integration.
+Entrypoints: `telegram` and `tg`.
+
+### Telegram CLI Usage
+```bash
+# Configure Telegram credentials
+tg config set --token <BOT_TOKEN> --chat-id <CHAT_ID>
+
+# Verify bot connectivity and test ping
+tg test
+
+# Send one-off notification
+tg send "Transfer complete!"
+
+# Start interactive bot daemon
+tg bot
+
+# Stream progress and alerts from any cloud transfer CLI:
+sf download rom/lineage.zip -p myproject -n
+gf upload ./video.mp4 -n
+pd download SCSZUyXG -n
+vf upload ./file.zip -n
+```
+
+### Telegram Python Library Usage
+```python
+from telegram import TelegramClient, TelegramProgressReporter
+
+# Send message
+client = TelegramClient(bot_token="<token>", chat_id="<chat_id>")
+client.send_message("<b>Transfer completed successfully!</b>")
+
+# Live throttled progress streaming
+reporter = TelegramProgressReporter(
+    title="ROM.zip", client=client, target_name="GoFile"
+)
+reporter.advance(1024 * 1024 * 10, total_bytes=1024 * 1024 * 100)
+reporter.finish(success_url="https://gofile.io/d/xyz")
 ```

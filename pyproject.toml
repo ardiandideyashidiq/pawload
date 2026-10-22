@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "aiogram>=3.17.0",
     "asyncssh>=2.17.0",
     "curl-cffi>=0.16.3",
     "loguru>=0.7.3",
@@ -24,6 +25,8 @@ vikingfile = "vikingfile:main"
 vf = "vikingfile:main"
 pixeldrain = "pixeldrain:main"
 pd = "pixeldrain:main"
+telegram = "telegram:main"
+tg = "telegram:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -39,5 +42,5 @@ dev = [
 ignore = ["BLE001", "ASYNC230", "S324", "S110", "SIM115"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/sourceforge", "src/gofile", "src/vikingfile", "src/pixeldrain"]
+packages = ["src/sourceforge", "src/gofile", "src/vikingfile", "src/pixeldrain", "src/telegram"]
 

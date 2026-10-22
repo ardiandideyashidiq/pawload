@@ -60,7 +60,9 @@ class GoFileClient:
             self.token = cfg.token
             return self.token
 
-        self.console.print("[dim]No GoFile token found; creating anonymous guest account...[/dim]")
+        self.console.print(
+            "[dim]No GoFile token found; creating anonymous guest account...[/dim]"
+        )
         try:
             account = create_guest_account()
             self.token = account["token"]
@@ -91,7 +93,9 @@ class GoFileClient:
         token = self.ensure_token()
         content_id = get_content_id(target)
 
-        content_data = get_content(content_id=content_id, token=token, password=password)
+        content_data = get_content(
+            content_id=content_id, token=token, password=password
+        )
         items = parse_content_items(content_data)
 
         if not items:
@@ -117,7 +121,11 @@ class GoFileClient:
         # Folder with multiple items
         if download_all:
             results: list[Path] = []
-            base_dir = Path(output_path) if output_path else Path(content_data.get("name", content_id))
+            base_dir = (
+                Path(output_path)
+                if output_path
+                else Path(content_data.get("name", content_id))
+            )
             base_dir.mkdir(parents=True, exist_ok=True)
             for it in items:
                 if not it.is_dir and it.link:
@@ -145,7 +153,9 @@ class GoFileClient:
             chosen = next(it for it in items if not it.is_dir)
 
         if not chosen.link:
-            raise ValueError(f"Selected item '{chosen.name}' does not have a direct download link.")
+            raise ValueError(
+                f"Selected item '{chosen.name}' does not have a direct download link."
+            )
 
         return await download_file_async(
             url=chosen.link,

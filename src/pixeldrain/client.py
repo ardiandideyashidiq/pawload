@@ -82,7 +82,9 @@ class PixelDrainClient:
 
     def delete(self, target: str) -> bool:
         if not self.api_key:
-            raise ValueError("API key is required to delete Pixeldrain files. Set via PIXELDRAIN_API_KEY or config.")
+            raise ValueError(
+                "API key is required to delete Pixeldrain files. Set via PIXELDRAIN_API_KEY or config."
+            )
         file_id = extract_file_id(target)
         return delete_file(file_id, api_key=self.api_key)
 
@@ -104,7 +106,9 @@ class PixelDrainClient:
         expected_sha256 = info.sha256_hash if info else None
 
         if info and not info.can_download:
-            raise PermissionError(f"Pixeldrain file '{file_id}' is restricted or cannot be downloaded.")
+            raise PermissionError(
+                f"Pixeldrain file '{file_id}' is restricted or cannot be downloaded."
+            )
 
         return await download_file_async(
             file_id=file_id,

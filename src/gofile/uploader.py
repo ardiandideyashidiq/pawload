@@ -65,7 +65,10 @@ def upload_file(
         raise RuntimeError(f"GoFile upload error: {msg}")
 
     d = res_data["data"]
-    download_page = d.get("downloadPage") or f"https://gofile.io/d/{d.get('parentFolderCode', d.get('parentFolder', ''))}"
+    download_page = (
+        d.get("downloadPage")
+        or f"https://gofile.io/d/{d.get('parentFolderCode', d.get('parentFolder', ''))}"
+    )
     guest_token = d.get("guestToken")
     logger.info("GoFile upload complete: {}", download_page)
 

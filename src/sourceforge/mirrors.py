@@ -16,9 +16,6 @@ class Mirror(NamedTuple):
     location: str
 
 
-
-
-
 @dataclass
 class ResolvedTarget:
     direct_url: str
@@ -52,12 +49,17 @@ def fetch_live_mirrors(project: str, remote_path: str) -> list[Mirror]:
             loc = (
                 m.group(5).strip()
                 if m.group(5)
-                else ("Closest mirror by GeoIP" if m_id == "autoselect" else "SourceForge Node")
+                else (
+                    "Closest mirror by GeoIP"
+                    if m_id == "autoselect"
+                    else "SourceForge Node"
+                )
             )
             mirrors.append(Mirror(id=m_id, name=name, location=loc))
         return mirrors
     except Exception:
         return []
+
 
 def is_file_path(path: str) -> bool:
     if path.endswith("/download"):
@@ -117,7 +119,9 @@ def parse_target(target: str, project: str | None = None) -> TargetInfo:
                 return TargetInfo(project=proj, is_project_or_dir=True, remote_dir="")
             if is_file_path(sub):
                 r_path = re.sub(r"/download$", "", sub)
-                return TargetInfo(project=proj, remote_path=r_path, is_project_or_dir=False)
+                return TargetInfo(
+                    project=proj, remote_path=r_path, is_project_or_dir=False
+                )
             return TargetInfo(project=proj, is_project_or_dir=True, remote_dir=sub)
 
         # 2. /project/<project>[/<subpath>] (downloads.sourceforge.net)
@@ -126,7 +130,9 @@ def parse_target(target: str, project: str | None = None) -> TargetInfo:
             proj = m_dl.group(1)
             sub = unquote(m_dl.group(2) or "").strip("/")
             if sub and is_file_path(sub):
-                return TargetInfo(project=proj, remote_path=sub, is_project_or_dir=False)
+                return TargetInfo(
+                    project=proj, remote_path=sub, is_project_or_dir=False
+                )
             return TargetInfo(project=proj, is_project_or_dir=True, remote_dir=sub)
 
         # 3. /projects/<project>[/] or /p/<project>[/]
@@ -178,13 +184,20 @@ def prompt_select_file(
         clean_item_path = item.path.strip().lstrip("/")
         is_latest = bool(
             clean_latest
-            and (clean_item_path == clean_latest or item.name == clean_latest.split("/")[-1])
+            and (
+                clean_item_path == clean_latest
+                or item.name == clean_latest.split("/")[-1]
+            )
         )
         if is_latest:
             default_idx = idx
         note = "[bold green]★ Latest Release[/bold green]" if is_latest else ""
         size_str = format_size(item.size)
-        mtime_str = item.modified_time.strftime("%Y-%m-%d %H:%M:%S") if item.modified_time else "-"
+        mtime_str = (
+            item.modified_time.strftime("%Y-%m-%d %H:%M:%S")
+            if item.modified_time
+            else "-"
+        )
         table.add_row(str(idx), item.name, size_str, mtime_str, note)
 
     con.print(table)
@@ -223,7 +236,9 @@ def prompt_mirror(
         if len(live_mirrors) > 1:
             from rich.table import Table
 
-            con.print(f"\n[bold cyan]SourceForge Live Mirrors for {ref_path.split('/')[-1]}:[/bold cyan]")
+            con.print(
+                f"\n[bold cyan]SourceForge Live Mirrors for {ref_path.split('/')[-1]}:[/bold cyan]"
+            )
             table = Table(show_header=True, header_style="bold magenta")
             table.add_column("#", justify="right", style="bold yellow")
             table.add_column("Mirror ID", style="cyan")
@@ -266,13 +281,13 @@ def resolve_download_target(
     chosen_mirror = mirror
     if not chosen_mirror:
         if interactive_prompt:
-            chosen_mirror = prompt_mirror(project=project, remote_path=clean_path, console=console)
+            chosen_mirror = prompt_mirror(
+                project=project, remote_path=clean_path, console=console
+            )
         else:
             chosen_mirror = "autoselect"
 
-    initial_url = (
-        f"https://downloads.sourceforge.net/project/{project}/{clean_path}?use_mirror={chosen_mirror}"
-    )
+    initial_url = f"https://downloads.sourceforge.net/project/{project}/{clean_path}?use_mirror={chosen_mirror}"
 
     resp = requests.get(
         initial_url,

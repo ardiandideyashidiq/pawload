@@ -95,14 +95,18 @@ class VikingFileClient:
 
     def delete(self, target: str) -> bool:
         if not self.user:
-            raise ValueError("User hash is required to delete files. Set via VIKINGFILE_USER or config.")
+            raise ValueError(
+                "User hash is required to delete files. Set via VIKINGFILE_USER or config."
+            )
         return delete_file(file_hash=target, user=self.user)
 
     # --- Rename ---
 
     def rename(self, target: str, new_filename: str) -> bool:
         if not self.user:
-            raise ValueError("User hash is required to rename files. Set via VIKINGFILE_USER or config.")
+            raise ValueError(
+                "User hash is required to rename files. Set via VIKINGFILE_USER or config."
+            )
         return rename_file(file_hash=target, user=self.user, new_filename=new_filename)
 
     # --- Download ---
@@ -117,7 +121,9 @@ class VikingFileClient:
         clean = target.strip()
         # Direct download URL
         if clean.startswith(("http://", "https://")) and "/f/" not in clean:
-            filename = clean.split("?")[0].rstrip("/").split("/")[-1] or "downloaded_file"
+            filename = (
+                clean.split("?")[0].rstrip("/").split("/")[-1] or "downloaded_file"
+            )
             return await download_file_async(
                 url=clean,
                 filename=filename,

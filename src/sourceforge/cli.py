@@ -10,6 +10,7 @@ from rich.table import Table
 from sourceforge.client import SourceForgeClient
 from sourceforge.config import Config, format_size, setup_logging
 from sourceforge.mirrors import prompt_mirror
+from telegram.reporter import create_reporter
 
 console = Console()
 
@@ -18,9 +19,14 @@ click.rich_click.SHOW_ARGUMENTS = True
 click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 
 
-
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def cli(ctx: click.Context, verbose: int) -> None:
     """SourceForge CLI: Upload, download, and manage FRS releases."""
@@ -33,12 +39,46 @@ def cli(ctx: click.Context, verbose: int) -> None:
 @click.argument("target")
 @click.option("-p", "--project", help="SourceForge project name.")
 @click.option("-o", "--output", help="Destination file or directory path.")
-@click.option("-m", "--mirror", help="Mirror ID (e.g., cfhcable, delska, twds, master, autoselect).")
-@click.option("-c", "--concurrency", type=int, default=None, help="Number of concurrent chunk workers.")
-@click.option("--verify/--no-verify", default=True, help="Verify MD5 checksum against SourceForge metadata.")
-@click.option("--prompt/--no-prompt", default=True, help="Interactively prompt for mirror region if not set.")
-@click.option("--latest", is_flag=True, help="Download latest release automatically without listing or prompting.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-m",
+    "--mirror",
+    help="Mirror ID (e.g., cfhcable, delska, twds, master, autoselect).",
+)
+@click.option(
+    "-c",
+    "--concurrency",
+    type=int,
+    default=None,
+    help="Number of concurrent chunk workers.",
+)
+@click.option(
+    "--verify/--no-verify",
+    default=True,
+    help="Verify MD5 checksum against SourceForge metadata.",
+)
+@click.option(
+    "--prompt/--no-prompt",
+    default=True,
+    help="Interactively prompt for mirror region if not set.",
+)
+@click.option(
+    "--latest",
+    is_flag=True,
+    help="Download latest release automatically without listing or prompting.",
+)
+@click.option(
+    "-n",
+    "--notify",
+    is_flag=True,
+    help="Stream progress and send completion alert to Telegram.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def download(
     ctx: click.Context,
@@ -50,11 +90,18 @@ def download(
     verify: bool,
     prompt: bool,
     latest: bool,
+    notify: bool,
     verbose: int,
 ) -> None:
     """Download a file or project release with parallel chunks, resume support, and checksum verification."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
+    reporter = (
+        create_reporter(title=f"SourceForge: {target}", target_name="SourceForge")
+        if notify
+        else None
+    )
+    cb = (lambda delta, tot: reporter.advance(delta, tot)) if reporter else None
     try:
         client = SourceForgeClient(project=project, console=console)
         dest = client.download(
@@ -65,12 +112,19 @@ def download(
             verify_checksum=verify,
             interactive_prompt=prompt,
             latest=latest,
+            progress_callback=cb,
         )
+        if reporter:
+            reporter.finish(success_url=f"Downloaded {dest.name}")
         console.print(f"[bold green]✓ Downloaded to:[/bold green] {dest.resolve()}")
     except KeyboardInterrupt:
+        if reporter:
+            reporter.finish(error="Cancelled by user")
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)
     except Exception as e:
+        if reporter:
+            reporter.finish(error=str(e))
         console.print(f"[bold red]Download Error:[/bold red] {e}")
         sys.exit(1)
 
@@ -81,8 +135,22 @@ def download(
 @click.option("-d", "--remote-dir", default="", help="Remote subfolder within project.")
 @click.option("-u", "--username", help="SourceForge username.")
 @click.option("-k", "--key", help="Path to SSH private key.")
-@click.option("-f", "--force", is_flag=True, help="Overwrite remote file if it already exists.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-f", "--force", is_flag=True, help="Overwrite remote file if it already exists."
+)
+@click.option(
+    "-n",
+    "--notify",
+    is_flag=True,
+    help="Stream progress and send completion alert to Telegram.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def upload(
     ctx: click.Context,
@@ -92,24 +160,40 @@ def upload(
     username: str | None,
     key: str | None,
     force: bool,
+    notify: bool,
     verbose: int,
 ) -> None:
     """Upload a file via SFTP with automatic directory creation and resume support."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
+    reporter = (
+        create_reporter(title=f"SourceForge: {file.name}", target_name="SourceForge")
+        if notify
+        else None
+    )
+    cb = (lambda copied, tot: reporter.update(copied, tot)) if reporter else None
     try:
-        client = SourceForgeClient(project=project, username=username, key_path=key, console=console)
+        client = SourceForgeClient(
+            project=project, username=username, key_path=key, console=console
+        )
         remote_target = client.upload(
             local_path=file,
             remote_dir=remote_dir,
             force=force,
             interactive=True,
+            progress_callback=cb,
         )
+        if reporter:
+            reporter.finish(success_url=str(remote_target))
         console.print(f"[bold green]✓ Upload complete:[/bold green] {remote_target}")
     except KeyboardInterrupt:
+        if reporter:
+            reporter.finish(error="Cancelled by user")
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)
     except Exception as e:
+        if reporter:
+            reporter.finish(error=str(e))
         console.print(f"[bold red]Upload Error:[/bold red] {e}")
         sys.exit(1)
 
@@ -118,9 +202,17 @@ def upload(
 @click.argument("remote_dir", default="", required=False)
 @click.option("-p", "--project", help="SourceForge project name.")
 @click.option("-u", "--username", help="SourceForge username (uses SFTP if provided).")
-@click.option("--rss", is_flag=True, help="Force unauthenticated public RSS feed listing.")
+@click.option(
+    "--rss", is_flag=True, help="Force unauthenticated public RSS feed listing."
+)
 @click.option("--sftp", is_flag=True, help="Force SFTP real-time filesystem listing.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def list_cmd(
     ctx: click.Context,
@@ -160,7 +252,11 @@ def list_cmd(
         for item in items:
             item_type = "[blue]DIR[/blue]" if item.is_dir else "[white]FILE[/white]"
             size_str = "-" if item.is_dir else format_size(item.size)
-            mtime_str = item.modified_time.strftime("%Y-%m-%d %H:%M:%S") if item.modified_time else "-"
+            mtime_str = (
+                item.modified_time.strftime("%Y-%m-%d %H:%M:%S")
+                if item.modified_time
+                else "-"
+            )
             md5_str = item.md5 or "-"
             table.add_row(item_type, item.name, size_str, mtime_str, md5_str)
 
@@ -179,7 +275,13 @@ def list_cmd(
 @click.option("-u", "--username", help="SourceForge username.")
 @click.option("-k", "--key", help="Path to SSH private key.")
 @click.option("-f", "--force", is_flag=True, help="Confirm deletion without prompting.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def delete(
     ctx: click.Context,
@@ -196,12 +298,16 @@ def delete(
     if not force:
         from rich.prompt import Confirm
 
-        if not Confirm.ask(f"[yellow]Are you sure you want to delete remote path '{remote_path}'?[/yellow]"):
+        if not Confirm.ask(
+            f"[yellow]Are you sure you want to delete remote path '{remote_path}'?[/yellow]"
+        ):
             console.print("[yellow]Cancelled.[/yellow]")
             return
 
     try:
-        client = SourceForgeClient(project=project, username=username, key_path=key, console=console)
+        client = SourceForgeClient(
+            project=project, username=username, key_path=key, console=console
+        )
         client.delete(remote_path=remote_path)
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
@@ -217,7 +323,13 @@ def delete(
 @click.option("-p", "--project", help="SourceForge project name.")
 @click.option("-u", "--username", help="SourceForge username.")
 @click.option("-k", "--key", help="Path to SSH private key.")
-@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    default=0,
+    help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
+)
 @click.pass_context
 def rename(
     ctx: click.Context,
@@ -232,7 +344,9 @@ def rename(
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
     try:
-        client = SourceForgeClient(project=project, username=username, key_path=key, console=console)
+        client = SourceForgeClient(
+            project=project, username=username, key_path=key, console=console
+        )
         client.rename(old_remote_path=old_path, new_remote_path=new_path)
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
@@ -270,7 +384,9 @@ def config_show() -> None:
 @click.option("-k", "--key", help="Default SSH key path.")
 @click.option("-m", "--mirror", help="Default download mirror.")
 @click.option("-c", "--concurrency", type=int, help="Default download concurrency.")
-@click.option("--pick-mirror", is_flag=True, help="Interactively select default mirror.")
+@click.option(
+    "--pick-mirror", is_flag=True, help="Interactively select default mirror."
+)
 def config_set(
     username: str | None,
     project: str | None,
@@ -290,7 +406,9 @@ def config_set(
         if concurrency is not None:
             cfg.concurrency = concurrency
         if pick_mirror:
-            cfg.default_mirror = prompt_mirror(project=cfg.project or project, console=console)
+            cfg.default_mirror = prompt_mirror(
+                project=cfg.project or project, console=console
+            )
         elif mirror is not None:
             cfg.default_mirror = mirror
 

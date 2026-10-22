@@ -39,7 +39,9 @@ def upload_file(
         mp.addpart(name="path", data=remote_path.encode())
     mp.addpart(name="file", filename=path.name, local_path=str(path))
 
-    with con.status(f"[cyan]Uploading {path.name} to Vikingfile ({total_size} bytes)...[/cyan]"):
+    with con.status(
+        f"[cyan]Uploading {path.name} to Vikingfile ({total_size} bytes)...[/cyan]"
+    ):
         try:
             resp = requests.post(
                 upload_server,

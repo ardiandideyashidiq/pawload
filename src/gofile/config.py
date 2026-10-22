@@ -30,8 +30,12 @@ class Config:
         token = os.environ.get("GOFILE_TOKEN") or data.get("token")
         account_id = os.environ.get("GOFILE_ACCOUNT_ID") or data.get("account_id")
         root_folder = os.environ.get("GOFILE_ROOT_FOLDER") or data.get("root_folder")
-        concurrency = int(os.environ.get("GOFILE_CONCURRENCY", data.get("concurrency", 4)))
-        chunk_size = int(os.environ.get("GOFILE_CHUNK_SIZE", data.get("chunk_size", 8 * 1024 * 1024)))
+        concurrency = int(
+            os.environ.get("GOFILE_CONCURRENCY", data.get("concurrency", 4))
+        )
+        chunk_size = int(
+            os.environ.get("GOFILE_CHUNK_SIZE", data.get("chunk_size", 8 * 1024 * 1024))
+        )
 
         return cls(
             token=token,

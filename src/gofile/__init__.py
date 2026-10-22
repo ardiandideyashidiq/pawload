@@ -23,12 +23,14 @@ __all__ = [
     "upload_file",
 ]
 
+
 def main() -> None:
     import sys
 
     from rich.console import Console
 
     from gofile.cli import cli
+
     try:
         cli()
     except KeyboardInterrupt:

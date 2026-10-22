@@ -36,7 +36,9 @@ def upload_file(
     mp = CurlMime()
     mp.addpart(name="file", filename=path.name, local_path=str(path))
 
-    with con.status(f"[cyan]Uploading {path.name} to Pixeldrain ({total_size} bytes)...[/cyan]"):
+    with con.status(
+        f"[cyan]Uploading {path.name} to Pixeldrain ({total_size} bytes)...[/cyan]"
+    ):
         try:
             resp = requests.post(
                 url,

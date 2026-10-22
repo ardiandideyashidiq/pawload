@@ -56,7 +56,10 @@ async def open_sftp(
     if password:
         conn_kwargs["password"] = password
 
-    async with asyncssh.connect(**conn_kwargs) as conn, conn.start_sftp_client() as sftp:
+    async with (
+        asyncssh.connect(**conn_kwargs) as conn,
+        conn.start_sftp_client() as sftp,
+    ):
         yield sftp
 
 
@@ -117,7 +120,9 @@ async def upload_file_sftp(
     ) as progress:
         task = progress.add_task("upload", total=file_size)
 
-        def sftp_progress_handler(src: bytes, dst: bytes, copied: int, total: int) -> None:
+        def sftp_progress_handler(
+            src: bytes, dst: bytes, copied: int, total: int
+        ) -> None:
             progress.update(task, completed=copied, total=total)
             if progress_callback:
                 progress_callback(copied, total)
@@ -132,7 +137,9 @@ async def upload_file_sftp(
             con.print("\n[yellow]Upload interrupted by user.[/yellow]")
             raise KeyboardInterrupt
 
-    con.print(f"[bold green]✓ Successfully uploaded:[/bold green] {local_file.name} -> {target_file}")
+    con.print(
+        f"[bold green]✓ Successfully uploaded:[/bold green] {local_file.name} -> {target_file}"
+    )
     return target_file
 
 
@@ -151,8 +158,16 @@ async def list_files_sftp(
         name = attr.filename
         if name in (".", ".."):
             continue
-        is_dir = (attr.attrs.permissions & 0o170000) == 0o040000 if attr.attrs.permissions else False
-        mtime = datetime.fromtimestamp(attr.attrs.mtime, tz=UTC) if attr.attrs.mtime else None
+        is_dir = (
+            (attr.attrs.permissions & 0o170000) == 0o040000
+            if attr.attrs.permissions
+            else False
+        )
+        mtime = (
+            datetime.fromtimestamp(attr.attrs.mtime, tz=UTC)
+            if attr.attrs.mtime
+            else None
+        )
         items.append(
             RemoteItem(
                 name=name,

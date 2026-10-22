@@ -41,7 +41,9 @@ def get_content_id(url_or_id: str) -> str:
     return clean
 
 
-def generate_website_token(account_token: str, secret: str = DEFAULT_TOKEN_SECRET) -> str:
+def generate_website_token(
+    account_token: str, secret: str = DEFAULT_TOKEN_SECRET
+) -> str:
     """Generate dynamic X-Website-Token for GoFile API."""
     time_window = str(int(time.time()) // TOKEN_WINDOW_SEC)
     token_seed = f"{USER_AGENT}::{LOCALE}::{account_token}::{time_window}::{secret}"
@@ -105,7 +107,9 @@ def get_content(
         if status == "error-password":
             raise PermissionError(f"GoFile content '{content_id}' requires a password.")
         if status == "error-rateLimit":
-            raise RuntimeError("GoFile rate limit exceeded. Please wait a moment or configure a personal token.")
+            raise RuntimeError(
+                "GoFile rate limit exceeded. Please wait a moment or configure a personal token."
+            )
         raise RuntimeError(f"GoFile API returned status: {status}")
 
     return data["data"]

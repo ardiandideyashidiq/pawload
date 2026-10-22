@@ -80,7 +80,9 @@ def list_files(
 ) -> list[VikingItem]:
     """List files in user account via VikingFile API."""
     if not user:
-        raise ValueError("User hash is required to list VikingFile files. Set via VIKINGFILE_USER or config.")
+        raise ValueError(
+            "User hash is required to list VikingFile files. Set via VIKINGFILE_USER or config."
+        )
 
     url = f"{API_BASE}/list-files"
     payload = {"user": user, "page": page}

@@ -82,7 +82,9 @@ def test_vikingfile_cli_check_command_live():
 
 def test_vikingfile_cli_interrupt():
     runner = CliRunner()
-    with patch("vikingfile.client.VikingFileClient.upload", side_effect=KeyboardInterrupt):
+    with patch(
+        "vikingfile.client.VikingFileClient.upload", side_effect=KeyboardInterrupt
+    ):
         result = runner.invoke(cli, ["upload", "README.md"])
         assert result.exit_code == 130
         assert "Operation cancelled by user" in result.output

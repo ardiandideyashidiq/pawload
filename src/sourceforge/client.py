@@ -131,12 +131,16 @@ class SourceForgeClient:
 
     def _require_project(self) -> str:
         if not self.project:
-            raise ValueError("SourceForge project name is required. Set via parameter, SF_PROJECT env, or config.")
+            raise ValueError(
+                "SourceForge project name is required. Set via parameter, SF_PROJECT env, or config."
+            )
         return self.project
 
     def _require_username(self) -> str:
         if not self.username:
-            raise ValueError("SourceForge username is required for upload/SFTP operations. Set via SF_USERNAME env or config.")
+            raise ValueError(
+                "SourceForge username is required for upload/SFTP operations. Set via SF_USERNAME env or config."
+            )
         return self.username
 
     # --- Download ---
@@ -174,7 +178,9 @@ class SourceForgeClient:
             )
             if items:
                 if interactive_prompt and not latest:
-                    chosen = prompt_select_file(items, latest_path=latest_path, console=self.console)
+                    chosen = prompt_select_file(
+                        items, latest_path=latest_path, console=self.console
+                    )
                     remote_file_path = chosen.path.strip().lstrip("/")
                     file_md5 = chosen.md5
                 else:
@@ -191,7 +197,9 @@ class SourceForgeClient:
                 raise ValueError(f"No files found in project '{target_info.project}'")
 
         if not remote_file_path:
-            raise ValueError(f"Could not determine remote file path for {target_info.project}")
+            raise ValueError(
+                f"Could not determine remote file path for {target_info.project}"
+            )
 
         return await download_file_async(
             project=target_info.project,
@@ -245,7 +253,9 @@ class SourceForgeClient:
     ) -> str:
         project = self._require_project()
         username = self._require_username()
-        async with open_sftp(username=username, key_path=self.key_path, password=self.password) as sftp:
+        async with open_sftp(
+            username=username, key_path=self.key_path, password=self.password
+        ) as sftp:
             return await upload_file_sftp(
                 sftp=sftp,
                 local_path=local_path,
@@ -284,13 +294,28 @@ class SourceForgeClient:
         project: str | None = None,
     ) -> list[RemoteItem]:
         proj = project or self.project or self._require_project()
-        should_sftp = use_sftp if use_sftp is not None else (self.username is not None and (self.key_path is not None or self.password is not None))
+        should_sftp = (
+            use_sftp
+            if use_sftp is not None
+            else (
+                self.username is not None
+                and (self.key_path is not None or self.password is not None)
+            )
+        )
         if should_sftp and self.username:
             try:
-                async with open_sftp(username=self.username, key_path=self.key_path, password=self.password) as sftp:
-                    return await list_files_sftp(sftp=sftp, project=proj, remote_dir=remote_dir)
+                async with open_sftp(
+                    username=self.username,
+                    key_path=self.key_path,
+                    password=self.password,
+                ) as sftp:
+                    return await list_files_sftp(
+                        sftp=sftp, project=proj, remote_dir=remote_dir
+                    )
             except Exception as e:
-                self.console.print(f"[yellow]SFTP list failed ({e}); falling back to public RSS feed.[/yellow]")
+                self.console.print(
+                    f"[yellow]SFTP list failed ({e}); falling back to public RSS feed.[/yellow]"
+                )
 
         return list_files_rss(project=proj, remote_dir=remote_dir)
 
@@ -300,16 +325,24 @@ class SourceForgeClient:
         use_sftp: bool | None = None,
         project: str | None = None,
     ) -> list[RemoteItem]:
-        return _run_sync(self.list_async(remote_dir=remote_dir, use_sftp=use_sftp, project=project))
+        return _run_sync(
+            self.list_async(remote_dir=remote_dir, use_sftp=use_sftp, project=project)
+        )
 
     # --- Delete ---
 
     async def delete_async(self, remote_path: str) -> None:
         project = self._require_project()
         username = self._require_username()
-        async with open_sftp(username=username, key_path=self.key_path, password=self.password) as sftp:
-            await delete_remote_file_sftp(sftp=sftp, project=project, remote_path=remote_path)
-            self.console.print(f"[bold green]✓ Deleted remote path:[/bold green] {remote_path}")
+        async with open_sftp(
+            username=username, key_path=self.key_path, password=self.password
+        ) as sftp:
+            await delete_remote_file_sftp(
+                sftp=sftp, project=project, remote_path=remote_path
+            )
+            self.console.print(
+                f"[bold green]✓ Deleted remote path:[/bold green] {remote_path}"
+            )
 
     def delete(self, remote_path: str) -> None:
         return _run_sync(self.delete_async(remote_path=remote_path))
@@ -319,14 +352,22 @@ class SourceForgeClient:
     async def rename_async(self, old_remote_path: str, new_remote_path: str) -> None:
         project = self._require_project()
         username = self._require_username()
-        async with open_sftp(username=username, key_path=self.key_path, password=self.password) as sftp:
+        async with open_sftp(
+            username=username, key_path=self.key_path, password=self.password
+        ) as sftp:
             await rename_remote_file_sftp(
                 sftp=sftp,
                 project=project,
                 old_remote_path=old_remote_path,
                 new_remote_path=new_remote_path,
             )
-            self.console.print(f"[bold green]✓ Renamed:[/bold green] {old_remote_path} -> {new_remote_path}")
+            self.console.print(
+                f"[bold green]✓ Renamed:[/bold green] {old_remote_path} -> {new_remote_path}"
+            )
 
     def rename(self, old_remote_path: str, new_remote_path: str) -> None:
-        return _run_sync(self.rename_async(old_remote_path=old_remote_path, new_remote_path=new_remote_path))
+        return _run_sync(
+            self.rename_async(
+                old_remote_path=old_remote_path, new_remote_path=new_remote_path
+            )
+        )

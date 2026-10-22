@@ -66,7 +66,6 @@ def test_download_state_sidecar():
         assert loaded.completed_chunks == [0, 1, 2]
 
 
-
 def test_rss_feed_listing_live():
     items = list_files_rss(project="rdndds-release", remote_dir="rom")
     assert len(items) >= 2
@@ -118,7 +117,9 @@ def test_parse_target_project_url():
 
 
 def test_parse_target_file_url():
-    info = parse_target("https://sourceforge.net/projects/rdndds-release/files/rom/README.md/download")
+    info = parse_target(
+        "https://sourceforge.net/projects/rdndds-release/files/rom/README.md/download"
+    )
     assert info.project == "rdndds-release"
     assert info.remote_path == "rom/README.md"
     assert info.is_project_or_dir is False

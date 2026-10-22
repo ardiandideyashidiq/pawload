@@ -83,7 +83,11 @@ def prompt_select_file(
 
     for idx, item in enumerate(file_items, start=1):
         size_str = format_size(item.size)
-        mtime_str = item.modified_time.strftime("%Y-%m-%d %H:%M:%S") if item.modified_time else "-"
+        mtime_str = (
+            item.modified_time.strftime("%Y-%m-%d %H:%M:%S")
+            if item.modified_time
+            else "-"
+        )
         table.add_row(str(idx), item.name, size_str, item.mimetype or "file", mtime_str)
 
     con.print(table)
@@ -154,7 +158,9 @@ async def download_file_async(
     completed_chunks_set = set()
     if state and state.url == url and state.total_bytes == total_bytes:
         completed_chunks_set = set(state.completed_chunks)
-        con.print(f"[green]Resuming download ({len(completed_chunks_set)} chunks completed)[/green]")
+        con.print(
+            f"[green]Resuming download ({len(completed_chunks_set)} chunks completed)[/green]"
+        )
         dest_file = open(dest, "r+b")
     else:
         dest_file = open(dest, "wb")
@@ -175,7 +181,7 @@ async def download_file_async(
     already_done_bytes = 0
     for i, start, end in chunks:
         if i in completed_chunks_set:
-            already_done_bytes += (end - start + 1)
+            already_done_bytes += end - start + 1
         else:
             queue.put_nowait((i, start, end))
 
@@ -195,7 +201,13 @@ async def download_file_async(
             name="Overall",
         )
         worker_tasks = [
-            progress.add_task(f"Worker {w+1}", total=0, completed=0, visible=False, name=f"Worker {w+1}")
+            progress.add_task(
+                f"Worker {w + 1}",
+                total=0,
+                completed=0,
+                visible=False,
+                name=f"Worker {w + 1}",
+            )
             for w in range(concurrency)
         ]
 
@@ -247,7 +259,9 @@ async def download_file_async(
                             if attempt == max_retries - 1:
                                 progress.update(w_task, visible=False)
                                 queue.task_done()
-                                con.print(f"[red]Worker {worker_id+1} failed chunk {chunk_idx}: {e}[/red]")
+                                con.print(
+                                    f"[red]Worker {worker_id + 1} failed chunk {chunk_idx}: {e}[/red]"
+                                )
                                 raise
                             await asyncio.sleep(1.0)
 

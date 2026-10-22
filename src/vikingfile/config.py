@@ -5,7 +5,9 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "vikingfile"
+CONFIG_DIR = (
+    Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "vikingfile"
+)
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 
 
@@ -30,8 +32,14 @@ class Config:
             or os.environ.get("VIKINGFILE_HASH")
             or data.get("user", "")
         )
-        concurrency = int(os.environ.get("VIKINGFILE_CONCURRENCY", data.get("concurrency", 4)))
-        chunk_size = int(os.environ.get("VIKINGFILE_CHUNK_SIZE", data.get("chunk_size", 8 * 1024 * 1024)))
+        concurrency = int(
+            os.environ.get("VIKINGFILE_CONCURRENCY", data.get("concurrency", 4))
+        )
+        chunk_size = int(
+            os.environ.get(
+                "VIKINGFILE_CHUNK_SIZE", data.get("chunk_size", 8 * 1024 * 1024)
+            )
+        )
 
         return cls(
             user=user,

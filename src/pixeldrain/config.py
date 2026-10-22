@@ -5,7 +5,9 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "pixeldrain"
+CONFIG_DIR = (
+    Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "pixeldrain"
+)
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 
 
@@ -30,8 +32,14 @@ class Config:
             or os.environ.get("PIXELDRAIN_KEY")
             or data.get("api_key")
         )
-        concurrency = int(os.environ.get("PIXELDRAIN_CONCURRENCY", data.get("concurrency", 4)))
-        chunk_size = int(os.environ.get("PIXELDRAIN_CHUNK_SIZE", data.get("chunk_size", 8 * 1024 * 1024)))
+        concurrency = int(
+            os.environ.get("PIXELDRAIN_CONCURRENCY", data.get("concurrency", 4))
+        )
+        chunk_size = int(
+            os.environ.get(
+                "PIXELDRAIN_CHUNK_SIZE", data.get("chunk_size", 8 * 1024 * 1024)
+            )
+        )
 
         return cls(
             api_key=api_key,
