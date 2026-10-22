@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from vikingfile.client import VikingFileClient
-from vikingfile.config import Config, format_size
+from vikingfile.config import Config, format_size, setup_logging
 
 console = Console()
 
@@ -18,20 +18,31 @@ click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-def cli() -> None:
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
+def cli(ctx: click.Context, verbose: int) -> None:
     """VikingFile CLI: Upload, check, download, and manage Vikingfile files."""
+    ctx.ensure_object(dict)
+    ctx.obj["verbose"] = verbose
+    setup_logging(verbose)
 
 
 @cli.command()
 @click.argument("file", type=click.Path(exists=True, path_type=Path))
 @click.option("-u", "--user", help="User account hash (leave empty for anonymous).")
 @click.option("-d", "--remote-dir", default="", help="Destination folder path on VikingFile.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def upload(
+    ctx: click.Context,
     file: Path,
     user: str | None,
     remote_dir: str,
+    verbose: int,
 ) -> None:
     """Upload a file to VikingFile anonymously or to your user account."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = VikingFileClient(user=user, console=console)
         result = client.upload(file_path=file, remote_path=remote_dir)
@@ -47,8 +58,12 @@ def upload(
 
 @cli.command()
 @click.argument("target")
-def check(target: str) -> None:
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
+def check(ctx: click.Context, target: str, verbose: int) -> None:
     """Check if a file exists on VikingFile and display metadata."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = VikingFileClient(console=console)
         info = client.check(target=target)
@@ -77,12 +92,18 @@ def check(target: str) -> None:
 @click.option("-u", "--user", help="User account hash.")
 @click.option("-p", "--page", default=1, type=int, help="Page number.")
 @click.option("-d", "--remote-dir", default="", help="Subfolder path.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def list_cmd(
+    ctx: click.Context,
     user: str | None,
     page: int,
     remote_dir: str,
+    verbose: int,
 ) -> None:
     """List files in your VikingFile account."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = VikingFileClient(user=user, console=console)
         items = client.list(page=page, remote_path=remote_dir)
@@ -172,12 +193,18 @@ def rename(
 @click.argument("target")
 @click.option("-o", "--output", help="Destination file path.")
 @click.option("-c", "--concurrency", type=int, default=None, help="Parallel chunk workers.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def download(
+    ctx: click.Context,
     target: str,
     output: str | None,
     concurrency: int | None,
+    verbose: int,
 ) -> None:
     """Download a direct file URL with parallel chunks and resume support."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = VikingFileClient(console=console)
         dest = client.download(target=target, output_path=output, concurrency=concurrency)

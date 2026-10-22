@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from gofile.client import GoFileClient
-from gofile.config import Config, format_size
+from gofile.config import Config, format_size, setup_logging
 
 console = Console()
 
@@ -18,8 +18,13 @@ click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-def cli() -> None:
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
+def cli(ctx: click.Context, verbose: int) -> None:
     """GoFile CLI: Upload, download, and manage GoFile.io files."""
+    ctx.ensure_object(dict)
+    ctx.obj["verbose"] = verbose
+    setup_logging(verbose)
 
 
 @cli.command()
@@ -30,7 +35,10 @@ def cli() -> None:
 @click.option("-c", "--concurrency", type=int, default=None, help="Number of concurrent chunk workers.")
 @click.option("--all", "download_all", is_flag=True, help="Download all files in the folder.")
 @click.option("--verify/--no-verify", default=True, help="Verify MD5 checksum against GoFile metadata.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def download(
+    ctx: click.Context,
     target: str,
     output: str | None,
     password: str | None,
@@ -38,8 +46,11 @@ def download(
     concurrency: int | None,
     download_all: bool,
     verify: bool,
+    verbose: int,
 ) -> None:
     """Download a file or folder from GoFile with parallel chunks and resume support."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = GoFileClient(token=token, concurrency=concurrency, console=console)
         dest = client.download(
@@ -67,12 +78,18 @@ def download(
 @click.argument("file", type=click.Path(exists=True, path_type=Path))
 @click.option("-f", "--folder-id", help="Destination folder ID on GoFile.")
 @click.option("-t", "--token", help="GoFile account token.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def upload(
+    ctx: click.Context,
     file: Path,
     folder_id: str | None,
     token: str | None,
+    verbose: int,
 ) -> None:
     """Upload a file to GoFile with real-time streaming progress."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = GoFileClient(token=token, console=console)
         result = client.upload(file_path=file, folder_id=folder_id)
@@ -89,12 +106,18 @@ def upload(
 @click.argument("target")
 @click.option("-p", "--password", help="Password for protected folders/files.")
 @click.option("-t", "--token", help="GoFile account token.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def list_cmd(
+    ctx: click.Context,
     target: str,
     password: str | None,
     token: str | None,
+    verbose: int,
 ) -> None:
     """List contents of a GoFile folder or file URL."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = GoFileClient(token=token, console=console)
         items = client.list(target=target, password=password)

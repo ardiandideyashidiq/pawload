@@ -7,6 +7,7 @@ from pathlib import Path
 
 from curl_cffi import requests
 from curl_cffi.curl import CurlMime
+from loguru import logger
 from rich.console import Console
 
 from gofile.api import UPLOAD_URL
@@ -34,6 +35,7 @@ def upload_file(
         raise FileNotFoundError(f"Local file not found: {path}")
 
     total_size = path.stat().st_size
+    logger.info("Starting GoFile upload: {} ({} bytes)", path.name, total_size)
     mp = CurlMime()
     if token:
         mp.addpart(name="token", data=token.encode())
@@ -65,6 +67,7 @@ def upload_file(
     d = res_data["data"]
     download_page = d.get("downloadPage") or f"https://gofile.io/d/{d.get('parentFolderCode', d.get('parentFolder', ''))}"
     guest_token = d.get("guestToken")
+    logger.info("GoFile upload complete: {}", download_page)
 
     con.print(f"[bold green]✓ Upload complete:[/bold green] {download_page}")
     return UploadResult(

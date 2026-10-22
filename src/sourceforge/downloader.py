@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from curl_cffi.requests import AsyncSession
+from loguru import logger
 from rich.console import Console
 from rich.progress import (
     BarColumn,
@@ -102,6 +103,7 @@ async def download_file_async(
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> Path:
     con = console or Console()
+    logger.info("Resolving download target: {}/{} (mirror={})", project, remote_path, mirror or "auto")
     target = resolve_download_target(
         project=project,
         remote_path=remote_path,
@@ -109,6 +111,7 @@ async def download_file_async(
         interactive_prompt=interactive_prompt,
         console=con,
     )
+    logger.info("Target URL resolved: {} (size={} bytes, ranges={})", target.direct_url, target.content_length, target.accept_ranges)
 
     dest = Path(output_path) if output_path else Path(target.filename)
     if dest.is_dir():
@@ -195,6 +198,7 @@ async def download_file_async(
                         break
 
                     chunk_len = end - start + 1
+                    logger.debug("Worker {} downloading chunk {}: bytes {}-{}", worker_id + 1, chunk_idx, start, end)
                     progress.update(w_task, total=chunk_len, completed=0, visible=True)
 
                     headers = {"Range": f"bytes={start}-{end}"}
@@ -223,6 +227,7 @@ async def download_file_async(
                                 state.completed_chunks.append(chunk_idx)
                                 state.save(sidecar_path)
 
+                            logger.debug("Worker {} completed chunk {}", worker_id + 1, chunk_idx)
                             progress.update(w_task, visible=False)
                             queue.task_done()
                             break
@@ -261,6 +266,7 @@ async def download_file_async(
             with con.status("[cyan]Verifying MD5 checksum...[/cyan]"):
                 md5_to_check = expected_md5 or get_expected_md5(project, remote_path)
                 if md5_to_check:
+                    logger.info("Verifying MD5 checksum (expected: {})", md5_to_check)
                     hasher = hashlib.md5()
                     with open(dest, "rb") as f:
                         while chunk := f.read(1024 * 1024):
@@ -270,6 +276,7 @@ async def download_file_async(
                         raise ValueError(
                             f"Checksum mismatch for {dest.name}! Expected {md5_to_check}, got {computed_md5}"
                         )
+                    logger.info("MD5 verified successfully: {}", computed_md5)
                     con.print(f"[bold green]✓ MD5 Verified:[/bold green] {computed_md5}")
                 else:
                     con.print("[dim]No remote MD5 checksum found in metadata; skipped hash check.[/dim]")

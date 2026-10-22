@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from pixeldrain.client import PixelDrainClient
-from pixeldrain.config import Config, format_size
+from pixeldrain.config import Config, format_size, setup_logging
 
 console = Console()
 
@@ -18,8 +18,13 @@ click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-def cli() -> None:
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
+def cli(ctx: click.Context, verbose: int) -> None:
     """Pixeldrain CLI: Upload, download, check, and manage Pixeldrain files."""
+    ctx.ensure_object(dict)
+    ctx.obj["verbose"] = verbose
+    setup_logging(verbose)
 
 
 @cli.command()
@@ -28,14 +33,20 @@ def cli() -> None:
 @click.option("-k", "--key", help="Pixeldrain API key.")
 @click.option("-c", "--concurrency", type=int, default=None, help="Number of concurrent chunk workers.")
 @click.option("--verify/--no-verify", default=True, help="Verify SHA256 checksum against Pixeldrain metadata.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def download(
+    ctx: click.Context,
     target: str,
     output: str | None,
     key: str | None,
     concurrency: int | None,
     verify: bool,
+    verbose: int,
 ) -> None:
     """Download a file from Pixeldrain with parallel chunks and SHA256 verification."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = PixelDrainClient(api_key=key, concurrency=concurrency, console=console)
         dest = client.download(
@@ -56,11 +67,17 @@ def download(
 @cli.command()
 @click.argument("file", type=click.Path(exists=True, path_type=Path))
 @click.option("-k", "--key", help="Pixeldrain API key.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def upload(
+    ctx: click.Context,
     file: Path,
     key: str | None,
+    verbose: int,
 ) -> None:
     """Upload a file to Pixeldrain."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = PixelDrainClient(api_key=key, console=console)
         res = client.upload(file_path=file)
@@ -77,11 +94,17 @@ def upload(
 @cli.command()
 @click.argument("target")
 @click.option("-k", "--key", help="Pixeldrain API key.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def info(
+    ctx: click.Context,
     target: str,
     key: str | None,
+    verbose: int,
 ) -> None:
     """Display metadata for a Pixeldrain file."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = PixelDrainClient(api_key=key, console=console)
         item = client.info(target=target)
@@ -114,11 +137,17 @@ def info(
 @cli.command(name="list")
 @click.argument("list_id")
 @click.option("-k", "--key", help="Pixeldrain API key.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def list_cmd(
+    ctx: click.Context,
     list_id: str,
     key: str | None,
+    verbose: int,
 ) -> None:
     """List files in a Pixeldrain list/album."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = PixelDrainClient(api_key=key, console=console)
         items = client.list(list_id=list_id)

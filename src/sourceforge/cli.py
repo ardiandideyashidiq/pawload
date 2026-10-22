@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.table import Table
 
 from sourceforge.client import SourceForgeClient
-from sourceforge.config import Config
+from sourceforge.config import Config, format_size, setup_logging
 from sourceforge.mirrors import prompt_mirror
 
 console = Console()
@@ -18,20 +18,15 @@ click.rich_click.SHOW_ARGUMENTS = True
 click.rich_click.GROUP_ARGUMENTS_OPTIONS = True
 
 
-def format_size(bytes_val: int) -> str:
-    if bytes_val <= 0:
-        return "0 B"
-    val = float(bytes_val)
-    for unit in ("B", "KB", "MB", "GB", "TB"):
-        if val < 1024.0:
-            return f"{val:.1f} {unit}" if unit != "B" else f"{int(val)} B"
-        val /= 1024.0
-    return f"{val:.1f} PB"
-
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-def cli() -> None:
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
+def cli(ctx: click.Context, verbose: int) -> None:
     """SourceForge CLI: Upload, download, and manage FRS releases."""
+    ctx.ensure_object(dict)
+    ctx.obj["verbose"] = verbose
+    setup_logging(verbose)
 
 
 @cli.command()
@@ -43,7 +38,10 @@ def cli() -> None:
 @click.option("--verify/--no-verify", default=True, help="Verify MD5 checksum against SourceForge metadata.")
 @click.option("--prompt/--no-prompt", default=True, help="Interactively prompt for mirror region if not set.")
 @click.option("--latest", is_flag=True, help="Download latest release automatically without listing or prompting.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def download(
+    ctx: click.Context,
     target: str,
     project: str | None,
     output: str | None,
@@ -52,8 +50,11 @@ def download(
     verify: bool,
     prompt: bool,
     latest: bool,
+    verbose: int,
 ) -> None:
     """Download a file or project release with parallel chunks, resume support, and checksum verification."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = SourceForgeClient(project=project, console=console)
         dest = client.download(
@@ -81,15 +82,21 @@ def download(
 @click.option("-u", "--username", help="SourceForge username.")
 @click.option("-k", "--key", help="Path to SSH private key.")
 @click.option("-f", "--force", is_flag=True, help="Overwrite remote file if it already exists.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def upload(
+    ctx: click.Context,
     file: Path,
     project: str | None,
     remote_dir: str,
     username: str | None,
     key: str | None,
     force: bool,
+    verbose: int,
 ) -> None:
     """Upload a file via SFTP with automatic directory creation and resume support."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = SourceForgeClient(project=project, username=username, key_path=key, console=console)
         remote_target = client.upload(
@@ -113,14 +120,20 @@ def upload(
 @click.option("-u", "--username", help="SourceForge username (uses SFTP if provided).")
 @click.option("--rss", is_flag=True, help="Force unauthenticated public RSS feed listing.")
 @click.option("--sftp", is_flag=True, help="Force SFTP real-time filesystem listing.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def list_cmd(
+    ctx: click.Context,
     remote_dir: str,
     project: str | None,
     username: str | None,
     rss: bool,
     sftp: bool,
+    verbose: int,
 ) -> None:
     """List remote files and folders in project."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         if remote_dir.startswith(("http://", "https://")):
             from sourceforge.mirrors import parse_target
@@ -166,14 +179,20 @@ def list_cmd(
 @click.option("-u", "--username", help="SourceForge username.")
 @click.option("-k", "--key", help="Path to SSH private key.")
 @click.option("-f", "--force", is_flag=True, help="Confirm deletion without prompting.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def delete(
+    ctx: click.Context,
     remote_path: str,
     project: str | None,
     username: str | None,
     key: str | None,
     force: bool,
+    verbose: int,
 ) -> None:
     """Delete a remote file or folder via SFTP."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     if not force:
         from rich.prompt import Confirm
 
@@ -198,14 +217,20 @@ def delete(
 @click.option("-p", "--project", help="SourceForge project name.")
 @click.option("-u", "--username", help="SourceForge username.")
 @click.option("-k", "--key", help="Path to SSH private key.")
+@click.option("-v", "--verbose", count=True, default=0, help="Enable verbose logging (-v for INFO, -vv for DEBUG).")
+@click.pass_context
 def rename(
+    ctx: click.Context,
     old_path: str,
     new_path: str,
     project: str | None,
     username: str | None,
     key: str | None,
+    verbose: int,
 ) -> None:
     """Rename or move a remote file or folder via SFTP."""
+    lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
+    setup_logging(lvl)
     try:
         client = SourceForgeClient(project=project, username=username, key_path=key, console=console)
         client.rename(old_remote_path=old_path, new_remote_path=new_path)

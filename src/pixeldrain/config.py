@@ -60,3 +60,29 @@ def format_size(bytes_val: int) -> str:
             return f"{val:.1f} {unit}" if unit != "B" else f"{int(val)} B"
         val /= 1024.0
     return f"{val:.1f} PB"
+
+
+def setup_logging(verbose: int = 0) -> None:
+    import sys
+
+    from loguru import logger
+
+    logger.remove()
+    if verbose == 0:
+        logger.add(
+            sys.stderr,
+            level="WARNING",
+            format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+        )
+    elif verbose == 1:
+        logger.add(
+            sys.stderr,
+            level="INFO",
+            format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+        )
+    else:
+        logger.add(
+            sys.stderr,
+            level="DEBUG",
+            format="<green>{time:HH:mm:ss}</green> | <cyan>{name}:{line}</cyan> | <level>{level: <8}</level> | <level>{message}</level>",
+        )
