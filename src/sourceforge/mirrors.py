@@ -69,12 +69,21 @@ class ResolvedTarget:
     filename: str
     mirror_used: str
 
+def is_file_path(path: str) -> bool:
+    if path.endswith("/download"):
+        return True
+    clean = path.strip("/")
+    last = clean.split("/")[-1]
+    return "." in last
+
 
 @dataclass
 class TargetInfo:
     project: str
-    remote_path: str
+    remote_path: str | None = None
     expected_md5: str | None = None
+    is_project_or_dir: bool = False
+    remote_dir: str = ""
 
 
 def get_best_release(project: str) -> dict[str, str] | None:
@@ -100,7 +109,7 @@ def parse_target(target: str, project: str | None = None) -> TargetInfo:
     """
     Parses a target string which can be:
     - A SourceForge URL (project URL, files URL, or direct download URL)
-    - A project name (to download the latest release)
+    - A project name (to list or download files)
     - A remote path within a project (when project is provided via param or config)
     """
     val = target.strip()
@@ -109,59 +118,94 @@ def parse_target(target: str, project: str | None = None) -> TargetInfo:
         parsed = urlparse(val)
         path = parsed.path.strip("/")
 
-        # 1. /projects/<project>/files/<subpath>[/download]
-        m_files = re.match(r"^projects/([^/]+)/files/(.+?)(?:/download)?/?$", path)
+        # 1. /projects/<project>/files[/<subpath>]
+        m_files = re.match(r"^projects/([^/]+)/files(?:/(.*))?$", path)
         if m_files:
             proj = m_files.group(1)
-            r_path = unquote(m_files.group(2))
-            return TargetInfo(project=proj, remote_path=r_path)
+            sub = unquote(m_files.group(2) or "").strip("/")
+            if not sub:
+                return TargetInfo(project=proj, is_project_or_dir=True, remote_dir="")
+            if is_file_path(sub):
+                r_path = re.sub(r"/download$", "", sub)
+                return TargetInfo(project=proj, remote_path=r_path, is_project_or_dir=False)
+            return TargetInfo(project=proj, is_project_or_dir=True, remote_dir=sub)
 
-        # 2. /project/<project>/<subpath> (downloads.sourceforge.net)
-        m_dl = re.match(r"^project/([^/]+)/(.+?)/?$", path)
+        # 2. /project/<project>[/<subpath>] (downloads.sourceforge.net)
+        m_dl = re.match(r"^project/([^/]+)(?:/(.*))?$", path)
         if m_dl:
             proj = m_dl.group(1)
-            r_path = unquote(m_dl.group(2))
-            return TargetInfo(project=proj, remote_path=r_path)
+            sub = unquote(m_dl.group(2) or "").strip("/")
+            if sub and is_file_path(sub):
+                return TargetInfo(project=proj, remote_path=sub, is_project_or_dir=False)
+            return TargetInfo(project=proj, is_project_or_dir=True, remote_dir=sub)
 
         # 3. /projects/<project>[/] or /p/<project>[/]
         m_proj = re.match(r"^(?:projects|p)/([^/]+)/?$", path)
         if m_proj:
             proj = m_proj.group(1)
-            best = get_best_release(proj)
-            if not best:
-                raise ValueError(f"No release found for project '{proj}'")
-            return TargetInfo(
-                project=proj,
-                remote_path=best["filename"],
-                expected_md5=best.get("md5"),
-            )
+            return TargetInfo(project=proj, is_project_or_dir=True, remote_dir="")
 
         raise ValueError(f"Unrecognized SourceForge URL: {val}")
 
     if project:
         if not val or val == project:
-            best = get_best_release(project)
-            if not best:
-                raise ValueError(f"No release found for project '{project}'")
-            return TargetInfo(
-                project=project,
-                remote_path=best["filename"],
-                expected_md5=best.get("md5"),
-            )
-        return TargetInfo(project=project, remote_path=val)
+            return TargetInfo(project=project, is_project_or_dir=True, remote_dir="")
+        if is_file_path(val):
+            return TargetInfo(project=project, remote_path=val, is_project_or_dir=False)
+        return TargetInfo(project=project, is_project_or_dir=True, remote_dir=val)
 
-    if "/" not in val:
-        best = get_best_release(val)
-        if best:
-            return TargetInfo(
-                project=val,
-                remote_path=best["filename"],
-                expected_md5=best.get("md5"),
-            )
+    if "/" not in val and not is_file_path(val):
+        return TargetInfo(project=val, is_project_or_dir=True, remote_dir="")
 
     raise ValueError(
         f"Cannot determine SourceForge project for '{val}'. Specify -p/--project or pass a SourceForge URL."
     )
+
+
+def prompt_select_file(
+    items: list,
+    latest_path: str | None = None,
+    console: Console | None = None,
+):
+    from rich.table import Table
+
+    from sourceforge.config import format_size
+
+    con = console or Console()
+    con.print("[bold cyan]Available Files for Download:[/bold cyan]")
+
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("#", justify="right", style="bold yellow")
+    table.add_column("File Name", style="bold")
+    table.add_column("Size", justify="right", style="green")
+    table.add_column("Modified (UTC)", style="dim")
+    table.add_column("Note", style="cyan")
+
+    default_idx = 1
+    clean_latest = latest_path.strip().lstrip("/") if latest_path else None
+
+    for idx, item in enumerate(items, start=1):
+        clean_item_path = item.path.strip().lstrip("/")
+        is_latest = bool(
+            clean_latest
+            and (clean_item_path == clean_latest or item.name == clean_latest.split("/")[-1])
+        )
+        if is_latest:
+            default_idx = idx
+        note = "[bold green]★ Latest Release[/bold green]" if is_latest else ""
+        size_str = format_size(item.size)
+        mtime_str = item.modified_time.strftime("%Y-%m-%d %H:%M:%S") if item.modified_time else "-"
+        table.add_row(str(idx), item.name, size_str, mtime_str, note)
+
+    con.print(table)
+
+    choice = Prompt.ask(
+        f"Choose a file to download [1-{len(items)}]",
+        choices=[str(i) for i in range(1, len(items) + 1)],
+        default=str(default_idx),
+        show_choices=False,
+    )
+    return items[int(choice) - 1]
 
 
 def prompt_mirror(console: Console | None = None) -> str:

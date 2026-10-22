@@ -12,7 +12,12 @@ from rich.console import Console
 
 from sourceforge.config import Config
 from sourceforge.downloader import download_file_async
-from sourceforge.mirrors import CLI_USER_AGENT, parse_target
+from sourceforge.mirrors import (
+    CLI_USER_AGENT,
+    get_best_release,
+    parse_target,
+    prompt_select_file,
+)
 from sourceforge.sftp import (
     RemoteItem,
     delete_remote_file_sftp,
@@ -145,22 +150,59 @@ class SourceForgeClient:
         concurrency: int | None = None,
         verify_checksum: bool = True,
         interactive_prompt: bool = True,
+        latest: bool = False,
         progress_callback: Callable[[int, int], None] | None = None,
         remote_path: str | None = None,
     ) -> Path:
+
         effective_target = target or remote_path
         if not effective_target:
             raise ValueError("Target URL, project name, or remote path is required.")
         target_info = parse_target(effective_target, project=self.project)
+        if not self.project:
+            self.project = target_info.project
+
+        remote_file_path: str | None = target_info.remote_path
+        file_md5: str | None = target_info.expected_md5
+
+        if target_info.is_project_or_dir:
+            best = get_best_release(target_info.project)
+            latest_path = best["filename"] if best else None
+            items = await self.list_async(
+                remote_dir=target_info.remote_dir,
+                use_sftp=False,
+                project=target_info.project,
+            )
+            if items:
+                if interactive_prompt and not latest:
+                    chosen = prompt_select_file(items, latest_path=latest_path, console=self.console)
+                    remote_file_path = chosen.path.strip().lstrip("/")
+                    file_md5 = chosen.md5
+                else:
+                    if best:
+                        remote_file_path = best["filename"]
+                        file_md5 = best.get("md5")
+                    else:
+                        remote_file_path = items[0].path.strip().lstrip("/")
+                        file_md5 = items[0].md5
+            elif best:
+                remote_file_path = best["filename"]
+                file_md5 = best.get("md5")
+            else:
+                raise ValueError(f"No files found in project '{target_info.project}'")
+
+        if not remote_file_path:
+            raise ValueError(f"Could not determine remote file path for {target_info.project}")
+
         return await download_file_async(
             project=target_info.project,
-            remote_path=target_info.remote_path,
+            remote_path=remote_file_path,
             output_path=output_path,
             mirror=mirror or self.default_mirror,
             concurrency=concurrency or self.concurrency,
             chunk_size=self.chunk_size,
             verify_checksum=verify_checksum,
-            expected_md5=target_info.expected_md5,
+            expected_md5=file_md5,
             interactive_prompt=interactive_prompt,
             console=self.console,
             progress_callback=progress_callback,
@@ -174,6 +216,7 @@ class SourceForgeClient:
         concurrency: int | None = None,
         verify_checksum: bool = True,
         interactive_prompt: bool = True,
+        latest: bool = False,
         progress_callback: Callable[[int, int], None] | None = None,
         remote_path: str | None = None,
     ) -> Path:
@@ -185,6 +228,7 @@ class SourceForgeClient:
                 concurrency=concurrency,
                 verify_checksum=verify_checksum,
                 interactive_prompt=interactive_prompt,
+                latest=latest,
                 progress_callback=progress_callback,
                 remote_path=remote_path,
             )
@@ -238,25 +282,26 @@ class SourceForgeClient:
         self,
         remote_dir: str = "",
         use_sftp: bool | None = None,
+        project: str | None = None,
     ) -> list[RemoteItem]:
-        project = self._require_project()
-        # Prefer SFTP if credentials available and use_sftp is not explicitly False
+        proj = project or self.project or self._require_project()
         should_sftp = use_sftp if use_sftp is not None else (self.username is not None and (self.key_path is not None or self.password is not None))
         if should_sftp and self.username:
             try:
                 async with open_sftp(username=self.username, key_path=self.key_path, password=self.password) as sftp:
-                    return await list_files_sftp(sftp=sftp, project=project, remote_dir=remote_dir)
+                    return await list_files_sftp(sftp=sftp, project=proj, remote_dir=remote_dir)
             except Exception as e:
                 self.console.print(f"[yellow]SFTP list failed ({e}); falling back to public RSS feed.[/yellow]")
 
-        return list_files_rss(project=project, remote_dir=remote_dir)
+        return list_files_rss(project=proj, remote_dir=remote_dir)
 
     def list(
         self,
         remote_dir: str = "",
         use_sftp: bool | None = None,
+        project: str | None = None,
     ) -> list[RemoteItem]:
-        return _run_sync(self.list_async(remote_dir=remote_dir, use_sftp=use_sftp))
+        return _run_sync(self.list_async(remote_dir=remote_dir, use_sftp=use_sftp, project=project))
 
     # --- Delete ---
 

@@ -118,17 +118,17 @@ def test_client_download_and_verify():
 def test_parse_target_project_url():
     info = parse_target("https://sourceforge.net/projects/netmodhttp/")
     assert info.project == "netmodhttp"
-    assert "NetMod" in info.remote_path
-    assert info.expected_md5 == "9571130b02bae785dffc7c86e21c9027"
+    assert info.is_project_or_dir is True
 
 
 def test_parse_target_file_url():
     info = parse_target("https://sourceforge.net/projects/rdndds-release/files/rom/README.md/download")
     assert info.project == "rdndds-release"
     assert info.remote_path == "rom/README.md"
+    assert info.is_project_or_dir is False
 
 
 def test_parse_target_bare_project():
     info = parse_target("netmodhttp")
     assert info.project == "netmodhttp"
-    assert "NetMod" in info.remote_path
+    assert info.is_project_or_dir is True

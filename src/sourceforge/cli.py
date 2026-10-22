@@ -42,6 +42,7 @@ def cli() -> None:
 @click.option("-c", "--concurrency", type=int, default=None, help="Number of concurrent chunk workers.")
 @click.option("--verify/--no-verify", default=True, help="Verify MD5 checksum against SourceForge metadata.")
 @click.option("--prompt/--no-prompt", default=True, help="Interactively prompt for mirror region if not set.")
+@click.option("--latest", is_flag=True, help="Download latest release automatically without listing or prompting.")
 def download(
     target: str,
     project: str | None,
@@ -50,6 +51,7 @@ def download(
     concurrency: int | None,
     verify: bool,
     prompt: bool,
+    latest: bool,
 ) -> None:
     """Download a file or project release with parallel chunks, resume support, and checksum verification."""
     try:
@@ -61,6 +63,7 @@ def download(
             concurrency=concurrency,
             verify_checksum=verify,
             interactive_prompt=prompt,
+            latest=latest,
         )
         console.print(f"[bold green]✓ Downloaded to:[/bold green] {dest.resolve()}")
     except Exception as e:

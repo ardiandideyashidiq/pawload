@@ -71,3 +71,14 @@ class Config:
 
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             f.write("\n".join(lines) + "\n")
+
+
+def format_size(bytes_val: int) -> str:
+    if bytes_val <= 0:
+        return "0 B"
+    val = float(bytes_val)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if val < 1024.0:
+            return f"{val:.1f} {unit}" if unit != "B" else f"{int(val)} B"
+        val /= 1024.0
+    return f"{val:.1f} PB"
