@@ -174,14 +174,19 @@ class WebBridge:
                         "provider": "pixeldrain",
                         "name": p_item.name,
                         "size": p_item.size,
-                        "sha256": p_item.sha256,
+                        "sha256": getattr(p_item, "sha256", None),
                     }
             except Exception as e:
                 logger.debug(f"Pixeldrain inspect error: {e}")
                 return {"provider": "pixeldrain", "name": target, "error": str(e)}
 
         # 5. SourceForge check
-        if "sourceforge.net" in target or target.startswith("sf:") or "/" in target:
+        if (
+            "sourceforge.net" in target
+            or "fsdn.com" in target
+            or target.startswith("sf:")
+            or ("/" in target and not target.startswith(("http://", "https://")))
+        ):
             try:
                 target_info = parse_target(target)
                 mirror_names = ["autoselect"]
@@ -405,26 +410,28 @@ class WebBridge:
                 if rec and rec["status"] == "running":
                     rec["status"] = "completed"
                     rec["progress_percent"] = 100.0
+                    rec["speed_bps"] = 0
+                    rec["eta_seconds"] = 0
+                snapshot = (
+                    dict(rec) if rec else {"id": transfer_id, "status": "completed"}
+                )
 
             if reporter:
                 reporter.finish(success=True)
 
-            self.dispatch_event(
-                "transfer_completed",
-                {
-                    "id": transfer_id,
-                    "dest_path": str(dest_file),
-                },
-            )
+            self.dispatch_event("transfer_completed", snapshot)
 
         except asyncio.CancelledError:
             with self._lock:
                 rec = self._transfers.get(transfer_id)
                 if rec and rec["status"] == "running":
                     rec["status"] = "paused"
+                    rec["speed_bps"] = 0
+                    rec["eta_seconds"] = 0
+                snapshot = dict(rec) if rec else {"id": transfer_id, "status": "paused"}
             if reporter:
                 reporter.finish(success=False, error_msg="Paused by user")
-            self.dispatch_event("transfer_paused", {"id": transfer_id})
+            self.dispatch_event("transfer_paused", snapshot)
 
         except Exception as e:
             logger.error(f"Transfer error for {transfer_id}: {e}")
@@ -433,9 +440,16 @@ class WebBridge:
                 if rec:
                     rec["status"] = "error"
                     rec["error"] = str(e)
+                    rec["speed_bps"] = 0
+                    rec["eta_seconds"] = 0
+                snapshot = (
+                    dict(rec)
+                    if rec
+                    else {"id": transfer_id, "status": "error", "error": str(e)}
+                )
             if reporter:
                 reporter.finish(success=False, error_msg=str(e))
-            self.dispatch_event("transfer_error", {"id": transfer_id, "error": str(e)})
+            self.dispatch_event("transfer_error", snapshot)
 
     def start_upload(
         self,
@@ -505,18 +519,50 @@ class WebBridge:
             except Exception as e:
                 logger.debug(f"Failed to initialize Telegram reporter: {e}")
 
+        last_time = time.time()
+        last_bytes = 0
+
+        def progress_cb(completed: int, total: int) -> None:
+            nonlocal last_time, last_bytes
+            now = time.time()
+            dt = now - last_time
+            if dt >= 0.25 or completed == total:
+                speed = (completed - last_bytes) / dt if dt > 0 else 0
+                eta = (total - completed) / speed if speed > 0 else 0
+                percent = (completed / total * 100) if total > 0 else 0.0
+
+                with self._lock:
+                    rec = self._transfers.get(transfer_id)
+                    if rec:
+                        rec["completed_bytes"] = completed
+                        rec["total_bytes"] = total
+                        rec["speed_bps"] = speed
+                        rec["eta_seconds"] = eta
+                        rec["progress_percent"] = percent
+                        self.dispatch_event("transfer_progress", dict(rec))
+
+                if reporter:
+                    reporter.update(completed, total)
+
+                last_time = now
+                last_bytes = completed
+
         try:
             result_url = ""
             if provider == "gofile":
                 gf = GoFileClient()
                 res = await gf.upload_async(
-                    file_path=file_path, folder_id=remote_path or None
+                    file_path=file_path,
+                    folder_id=remote_path or None,
+                    progress_callback=progress_cb,
                 )
                 result_url = res.download_page or ""
             elif provider == "vikingfile":
                 vf = VikingFileClient()
                 vres = await vf.upload_async(
-                    file_path=file_path, remote_path=remote_path
+                    file_path=file_path,
+                    remote_path=remote_path,
+                    progress_callback=progress_cb,
                 )
                 result_url = vres.download_url or ""
             elif provider == "pixeldrain":
@@ -525,7 +571,12 @@ class WebBridge:
                 result_url = pres.url or ""
             elif provider == "sourceforge":
                 sf = SourceForgeClient()
-                await sf.upload_async(file_path=file_path, remote_path=remote_path)
+                await sf.upload_async(
+                    local_path=file_path,
+                    remote_dir=remote_path,
+                    interactive_prompt=False,
+                    progress_callback=progress_cb,
+                )
                 result_url = f"https://sourceforge.net/projects/{sf.project}/files/{file_path.name}"
             else:
                 raise ValueError(f"Unknown upload provider: {provider}")
@@ -536,26 +587,30 @@ class WebBridge:
                     rec["status"] = "completed"
                     rec["result_url"] = result_url
                     rec["progress_percent"] = 100.0
+                    rec["speed_bps"] = 0
+                    rec["eta_seconds"] = 0
+                snapshot = (
+                    dict(rec) if rec else {"id": transfer_id, "status": "completed"}
+                )
 
             if reporter:
                 reporter.finish(success=True)
 
-            self.dispatch_event(
-                "transfer_completed",
-                {
-                    "id": transfer_id,
-                    "result_url": result_url,
-                },
-            )
+            self.dispatch_event("transfer_completed", snapshot)
 
         except asyncio.CancelledError:
             with self._lock:
                 rec = self._transfers.get(transfer_id)
                 if rec:
                     rec["status"] = "cancelled"
+                    rec["speed_bps"] = 0
+                    rec["eta_seconds"] = 0
+                snapshot = (
+                    dict(rec) if rec else {"id": transfer_id, "status": "cancelled"}
+                )
             if reporter:
                 reporter.finish(success=False, error_msg="Cancelled by user")
-            self.dispatch_event("transfer_cancelled", {"id": transfer_id})
+            self.dispatch_event("transfer_cancelled", snapshot)
 
         except Exception as e:
             logger.error(f"Upload error for {transfer_id}: {e}")
@@ -564,9 +619,16 @@ class WebBridge:
                 if rec:
                     rec["status"] = "error"
                     rec["error"] = str(e)
+                    rec["speed_bps"] = 0
+                    rec["eta_seconds"] = 0
+                snapshot = (
+                    dict(rec)
+                    if rec
+                    else {"id": transfer_id, "status": "error", "error": str(e)}
+                )
             if reporter:
                 reporter.finish(success=False, error_msg=str(e))
-            self.dispatch_event("transfer_error", {"id": transfer_id, "error": str(e)})
+            self.dispatch_event("transfer_error", snapshot)
 
     def pause_transfer(self, transfer_id: str) -> bool:
         """Pause an in-flight transfer cleanly."""
@@ -576,8 +638,9 @@ class WebBridge:
             if fut and not fut.done():
                 fut.cancel()
             if rec and rec["status"] == "running":
-                rec["status"] = "paused"
-                self.dispatch_event("transfer_paused", {"id": transfer_id})
+                rec["speed_bps"] = 0
+                rec["eta_seconds"] = 0
+                self.dispatch_event("transfer_paused", dict(rec))
                 return True
         return False
 
@@ -599,10 +662,11 @@ class WebBridge:
                 notify=rec.get("notify", False),
             )
             rec["status"] = "running"
+            snapshot = dict(rec)
             future = self._worker.submit(coro)
             with self._lock:
                 self._futures[transfer_id] = future
-            self.dispatch_event("transfer_resumed", {"id": transfer_id})
+            self.dispatch_event("transfer_resumed", snapshot)
             return True
         return False
 
@@ -615,6 +679,8 @@ class WebBridge:
                 fut.cancel()
             if rec:
                 rec["status"] = "cancelled"
-                self.dispatch_event("transfer_cancelled", {"id": transfer_id})
+                rec["speed_bps"] = 0
+                rec["eta_seconds"] = 0
+                self.dispatch_event("transfer_cancelled", dict(rec))
                 return True
         return False

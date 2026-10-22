@@ -24,47 +24,64 @@ export function useTransfers() {
   useEffect(() => {
     reload()
 
-    const es = new EventSource('/api/events')
+    let es: EventSource | null = null
 
-    es.onopen = () => setConnected(true)
-    es.onerror = () => setConnected(false)
+    const initSSE = () => {
+      es = new EventSource('/api/events')
+      es.onopen = () => setConnected(true)
+      es.onerror = () => setConnected(false)
 
-    es.addEventListener('init', (e: MessageEvent) => {
-      try {
-        const data = JSON.parse(e.data) as TransferRecord[]
-        setTransfers(data)
-      } catch (err) {
-        console.error('Failed to parse init event', err)
+      es.addEventListener('init', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data) as TransferRecord[]
+          if (Array.isArray(data)) setTransfers(data)
+        } catch (err) {
+          console.error('Failed to parse init event', err)
+        }
+      })
+
+      const handleTransferEvent = (e: MessageEvent) => {
+        try {
+          const parsed = JSON.parse(e.data)
+          const item: TransferRecord =
+            parsed && parsed.data && parsed.data.id
+              ? (parsed.data as TransferRecord)
+              : (parsed as TransferRecord)
+          if (!item || !item.id) return
+
+          setTransfers((prev) => {
+            const index = prev.findIndex((t) => t.id === item.id)
+            if (index >= 0) {
+              const next = [...prev]
+              next[index] = { ...next[index], ...item }
+              return next
+            }
+            return [item, ...prev]
+          })
+        } catch (err) {
+          console.error('Failed to parse transfer event', err)
+        }
       }
-    })
 
-    const handleTransferEvent = (e: MessageEvent) => {
-      try {
-        const item = JSON.parse(e.data) as TransferRecord
-        setTransfers((prev) => {
-          const index = prev.findIndex((t) => t.id === item.id)
-          if (index >= 0) {
-            const next = [...prev]
-            next[index] = item
-            return next
-          }
-          return [item, ...prev]
-        })
-      } catch (err) {
-        console.error('Failed to parse transfer event', err)
-      }
+      es.onmessage = handleTransferEvent
+      es.addEventListener('transfer_added', handleTransferEvent)
+      es.addEventListener('transfer_progress', handleTransferEvent)
+      es.addEventListener('transfer_completed', handleTransferEvent)
+      es.addEventListener('transfer_paused', handleTransferEvent)
+      es.addEventListener('transfer_resumed', handleTransferEvent)
+      es.addEventListener('transfer_cancelled', handleTransferEvent)
+      es.addEventListener('transfer_error', handleTransferEvent)
     }
 
-    es.addEventListener('transfer_added', handleTransferEvent)
-    es.addEventListener('transfer_progress', handleTransferEvent)
-    es.addEventListener('transfer_completed', handleTransferEvent)
-    es.addEventListener('transfer_paused', handleTransferEvent)
-    es.addEventListener('transfer_resumed', handleTransferEvent)
-    es.addEventListener('transfer_cancelled', handleTransferEvent)
-    es.addEventListener('transfer_error', handleTransferEvent)
+    if (document.readyState === 'complete') {
+      initSSE()
+    } else {
+      window.addEventListener('load', initSSE, { once: true })
+    }
 
     return () => {
-      es.close()
+      window.removeEventListener('load', initSSE)
+      es?.close()
     }
   }, [reload])
 
