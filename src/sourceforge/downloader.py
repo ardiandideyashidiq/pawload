@@ -19,7 +19,7 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-from sourceforge.mirrors import CLI_USER_AGENT, resolve_download_target
+from sourceforge.mirrors import resolve_download_target
 
 
 def get_expected_md5(project: str, remote_path: str) -> str | None:
@@ -33,7 +33,7 @@ def get_expected_md5(project: str, remote_path: str) -> str | None:
     try:
         from curl_cffi import requests
 
-        resp = requests.get(rss_url, headers={"User-Agent": CLI_USER_AGENT}, timeout=10)
+        resp = requests.get(rss_url, timeout=10)
         if resp.status_code != 200:
             return None
         root = ET.fromstring(resp.content)
@@ -122,11 +122,7 @@ async def download_file_async(
     if not target.accept_ranges or total_bytes <= 0:
         con.print("[yellow]Server does not support range requests; using single stream.[/yellow]")
         async with AsyncSession() as session:
-            resp = await session.get(
-                target.direct_url,
-                headers={"User-Agent": CLI_USER_AGENT},
-                stream=True,
-            )
+            resp = await session.get(target.direct_url, stream=True)
             with open(dest, "wb") as f:
                 async for chunk in resp.aiter_content():
                     f.write(chunk)
@@ -197,10 +193,7 @@ async def download_file_async(
                     chunk_len = end - start + 1
                     progress.update(w_task, total=chunk_len, completed=0, visible=True)
 
-                    headers = {
-                        "User-Agent": CLI_USER_AGENT,
-                        "Range": f"bytes={start}-{end}",
-                    }
+                    headers = {"Range": f"bytes={start}-{end}"}
 
                     max_retries = 3
                     for attempt in range(max_retries):

@@ -250,7 +250,7 @@ def config_set(
     if concurrency is not None:
         cfg.concurrency = concurrency
     if pick_mirror:
-        cfg.default_mirror = prompt_mirror(console)
+        cfg.default_mirror = prompt_mirror(project=cfg.project or project, console=console)
     elif mirror is not None:
         cfg.default_mirror = mirror
 

@@ -8,7 +8,6 @@ from sourceforge.client import SourceForgeClient, list_files_rss
 from sourceforge.config import Config
 from sourceforge.downloader import DownloadState, get_expected_md5
 from sourceforge.mirrors import (
-    REGIONS,
     fetch_live_mirrors,
     parse_target,
     resolve_download_target,
@@ -66,14 +65,6 @@ def test_download_state_sidecar():
         assert loaded.total_bytes == 1000
         assert loaded.completed_chunks == [0, 1, 2]
 
-
-def test_mirrors_structure():
-    assert "auto" in REGIONS
-    assert "master" in REGIONS
-    assert "na" in REGIONS
-    assert "eu" in REGIONS
-    assert "asia" in REGIONS
-    assert len(REGIONS["na"].mirrors) >= 1
 
 
 def test_rss_feed_listing_live():

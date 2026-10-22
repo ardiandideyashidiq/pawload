@@ -13,7 +13,6 @@ from rich.console import Console
 from sourceforge.config import Config
 from sourceforge.downloader import download_file_async
 from sourceforge.mirrors import (
-    CLI_USER_AGENT,
     get_best_release,
     parse_target,
     prompt_select_file,
@@ -32,7 +31,7 @@ def list_files_rss(project: str, remote_dir: str = "") -> list[RemoteItem]:
     """List project files unauthenticated via public SourceForge RSS feed."""
     clean_sub = remote_dir.strip().strip("/")
     rss_url = f"https://sourceforge.net/projects/{project}/rss?path=/{clean_sub}"
-    resp = requests.get(rss_url, headers={"User-Agent": CLI_USER_AGENT}, timeout=15)
+    resp = requests.get(rss_url, timeout=15)
     if resp.status_code != 200:
         return []
 

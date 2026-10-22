@@ -9,8 +9,6 @@ from curl_cffi import requests
 from rich.console import Console
 from rich.prompt import Prompt
 
-CLI_USER_AGENT = "curl/8.0"
-
 
 class Mirror(NamedTuple):
     id: str
@@ -18,46 +16,7 @@ class Mirror(NamedTuple):
     location: str
 
 
-class Region(NamedTuple):
-    name: str
-    mirrors: list[Mirror]
 
-
-REGIONS: dict[str, Region] = {
-    "auto": Region(
-        name="Auto-Select (Recommended)",
-        mirrors=[Mirror("autoselect", "SourceForge Geo-Director", "Closest mirror by GeoIP")],
-    ),
-    "master": Region(
-        name="Master Authoritative (Fast & Global)",
-        mirrors=[Mirror("master", "SourceForge Master Node", "Global Authoritative")],
-    ),
-    "na": Region(
-        name="North America",
-        mirrors=[
-            Mirror("cfhcable", "Cfhcable", "Tampa, FL, United States"),
-            Mirror("gigenet", "GigeNET", "Chicago / Fayetteville, United States"),
-            Mirror("cytranet", "Cytranet", "Dallas / Las Vegas, United States"),
-            Mirror("pilotfiber", "Pilotfiber", "New York, NY, United States"),
-        ],
-    ),
-    "eu": Region(
-        name="Europe",
-        mirrors=[
-            Mirror("delska", "Delska", "Frankfurt, Germany / Amsterdam, Netherlands"),
-            Mirror("altushost", "AltusHost", "Netherlands / Sweden / Bulgaria"),
-            Mirror("unlimited", "UNLIMITED.RS", "Belgrade, Serbia"),
-        ],
-    ),
-    "asia": Region(
-        name="Asia-Pacific",
-        mirrors=[
-            Mirror("twds", "TWDS", "Taipei, Taiwan"),
-            Mirror("excellmedia", "Excell Media", "Hyderabad, India"),
-            Mirror("ixpeering", "IX Australia", "Brisbane, Australia"),
-        ],
-    ),
-}
 
 
 @dataclass
@@ -74,7 +33,7 @@ def fetch_live_mirrors(project: str, remote_path: str) -> list[Mirror]:
     clean_path = remote_path.strip().lstrip("/")
     url = f"https://sourceforge.net/settings/mirror_choices?projectname={project}&filename={clean_path}"
     try:
-        resp = requests.get(url, headers={"User-Agent": CLI_USER_AGENT}, timeout=8)
+        resp = requests.get(url, timeout=8)
         if resp.status_code != 200:
             return []
 
@@ -121,7 +80,7 @@ def get_best_release(project: str) -> dict[str, str] | None:
     """Fetch best/latest release metadata for a project from SourceForge."""
     url = f"https://sourceforge.net/projects/{project}/best_release.json"
     try:
-        resp = requests.get(url, headers={"User-Agent": CLI_USER_AGENT}, timeout=10)
+        resp = requests.get(url, timeout=10)
         if resp.status_code == 200:
             data = resp.json()
             rel = data.get("release")
@@ -247,15 +206,20 @@ def prompt_mirror(
     """Interactively ask user for mirror choice, fetching live mirrors when available."""
     con = console or Console()
 
-    # 1. Dynamic live mirrors for the target file
-    if project and remote_path:
-        live_mirrors = fetch_live_mirrors(project, remote_path)
+    ref_path = remote_path
+    if project and not ref_path:
+        best = get_best_release(project)
+        if best:
+            ref_path = best["filename"]
+
+    if project and ref_path:
+        live_mirrors = fetch_live_mirrors(project, ref_path)
         if len(live_mirrors) == 1:
             return live_mirrors[0].id
         if len(live_mirrors) > 1:
             from rich.table import Table
 
-            con.print(f"\n[bold cyan]SourceForge Live Mirrors for {remote_path.split('/')[-1]}:[/bold cyan]")
+            con.print(f"\n[bold cyan]SourceForge Live Mirrors for {ref_path.split('/')[-1]}:[/bold cyan]")
             table = Table(show_header=True, header_style="bold magenta")
             table.add_column("#", justify="right", style="bold yellow")
             table.add_column("Mirror ID", style="cyan")
@@ -275,35 +239,7 @@ def prompt_mirror(
             )
             return live_mirrors[int(choice) - 1].id
 
-    # 2. Fallback to static regional prompt
-    con.print("[bold cyan]SourceForge Download Mirror Selection[/bold cyan]")
-    region_keys = list(REGIONS.keys())
-    for idx, key in enumerate(region_keys, start=1):
-        reg = REGIONS[key]
-        con.print(f"  [bold yellow]{idx}[/bold yellow]. {reg.name}")
-
-    choice = Prompt.ask(
-        "Choose a region",
-        choices=[str(i) for i in range(1, len(region_keys) + 1)],
-        default="1",
-        show_choices=False,
-    )
-    chosen_region = REGIONS[region_keys[int(choice) - 1]]
-
-    if len(chosen_region.mirrors) == 1:
-        return chosen_region.mirrors[0].id
-
-    con.print(f"\n[cyan]Mirrors in {chosen_region.name}:[/cyan]")
-    for idx, m in enumerate(chosen_region.mirrors, start=1):
-        con.print(f"  [bold yellow]{idx}[/bold yellow]. {m.name} ({m.location})")
-
-    mirror_choice = Prompt.ask(
-        "Choose a mirror",
-        choices=[str(i) for i in range(1, len(chosen_region.mirrors) + 1)],
-        default="1",
-        show_choices=False,
-    )
-    return chosen_region.mirrors[int(mirror_choice) - 1].id
+    return Prompt.ask("Enter mirror ID", default="autoselect")
 
 
 def resolve_download_target(
@@ -328,7 +264,6 @@ def resolve_download_target(
 
     resp = requests.get(
         initial_url,
-        headers={"User-Agent": CLI_USER_AGENT},
         allow_redirects=True,
         stream=True,
     )
