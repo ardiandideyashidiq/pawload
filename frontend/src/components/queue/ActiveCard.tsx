@@ -1,0 +1,153 @@
+import { ArrowDownToLine, ArrowUpToLine, Pause, Play, X } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import type { TransferRecord } from '@/types/transfer'
+
+interface ActiveCardProps {
+  transfer: TransferRecord
+  onPause: (id: string) => void
+  onResume: (id: string) => void
+  onCancel: (id: string) => void
+}
+
+function formatBytes(bytes?: number | null): string {
+  if (!bytes || bytes <= 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let size = bytes
+  let unitIndex = 0
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024
+    unitIndex++
+  }
+  return `${size.toFixed(1)} ${units[unitIndex]}`
+}
+
+function formatSpeed(bps: number): string {
+  if (bps <= 0) return '0 B/s'
+  return `${formatBytes(bps)}/s`
+}
+
+function formatEta(seconds?: number | null): string {
+  if (seconds === undefined || seconds === null || seconds <= 0 || !isFinite(seconds)) return '--'
+  if (seconds < 60) return `${Math.round(seconds)}s`
+  const minutes = Math.floor(seconds / 60)
+  const remSeconds = Math.round(seconds % 60)
+  if (minutes < 60) return `${minutes}m ${remSeconds}s`
+  const hours = Math.floor(minutes / 60)
+  return `${hours}h ${minutes % 60}m`
+}
+
+function getProviderVariant(provider: string): 'sourceforge' | 'gofile' | 'vikingfile' | 'pixeldrain' | 'default' {
+  const p = provider.toLowerCase()
+  if (p === 'sourceforge' || p === 'gofile' || p === 'vikingfile' || p === 'pixeldrain') {
+    return p
+  }
+  return 'default'
+}
+
+export function ActiveCard({ transfer, onPause, onResume, onCancel }: ActiveCardProps) {
+  const isRunning = transfer.status === 'running'
+  const isPaused = transfer.status === 'paused'
+
+  return (
+    <Card className="border-border bg-card/70 hover:border-border/80 transition-all shadow-sm">
+      <CardContent className="p-4 space-y-3">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1 min-w-0 flex-1">
+            <div className="flex items-center space-x-2">
+              <Badge variant={getProviderVariant(transfer.provider)}>
+                {transfer.provider}
+              </Badge>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                {transfer.type === 'download' ? (
+                  <ArrowDownToLine className="w-3 h-3 text-primary" />
+                ) : (
+                  <ArrowUpToLine className="w-3 h-3 text-emerald-400" />
+                )}
+                {transfer.type}
+              </span>
+              <span className="text-[10px] font-mono text-muted-foreground">
+                • {transfer.concurrency} workers
+              </span>
+            </div>
+            <h4 className="text-sm font-semibold text-foreground truncate" title={transfer.name}>
+              {transfer.name}
+            </h4>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center space-x-1 shrink-0">
+            {isRunning && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onPause(transfer.id)}
+                title="Pause transfer"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              >
+                <Pause className="w-4 h-4" />
+              </Button>
+            )}
+            {isPaused && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onResume(transfer.id)}
+                title="Resume transfer"
+                className="h-8 w-8 text-emerald-400 hover:text-emerald-300"
+              >
+                <Play className="w-4 h-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onCancel(transfer.id)}
+              title="Cancel transfer"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <Progress
+          value={transfer.progress_percent}
+          className="h-2 bg-secondary"
+          indicatorClassName={isRunning ? 'striped-bar bg-primary' : isPaused ? 'bg-amber-500' : 'bg-primary'}
+        />
+
+        {/* Footer info: size, speed, ETA, percent */}
+        <div className="flex items-center justify-between text-xs font-mono text-muted-foreground">
+          <div className="flex items-center space-x-3">
+            <span>
+              {formatBytes(transfer.completed_bytes)} / {formatBytes(transfer.total_bytes)}
+            </span>
+            <span>•</span>
+            <span className="font-semibold text-foreground">
+              {transfer.progress_percent.toFixed(1)}%
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            {isRunning && (
+              <>
+                <span className="text-emerald-400 font-semibold">
+                  {formatSpeed(transfer.speed_bps)}
+                </span>
+                <span>•</span>
+                <span>ETA: {formatEta(transfer.eta_seconds)}</span>
+              </>
+            )}
+            {isPaused && <span className="text-amber-400 font-semibold">PAUSED</span>}
+            {transfer.status === 'queued' && <span className="text-muted-foreground">QUEUED</span>}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}

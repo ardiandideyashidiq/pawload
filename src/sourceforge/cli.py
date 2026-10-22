@@ -451,3 +451,54 @@ def config_set(
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)
+
+
+@cli.command("web")
+@click.option(
+    "--host", default="0.0.0.0", help="Host interface to bind (default: 0.0.0.0)."
+)
+@click.option("--port", type=int, default=8765, help="Port to bind (default: 8765).")
+@click.option(
+    "--open-browser/--no-browser",
+    default=True,
+    help="Automatically open web browser.",
+)
+def web_cmd(host: str, port: int, open_browser: bool) -> None:
+    """Launch MultiCloud Web Transfer Dashboard (Flask + Tailwind CSS)."""
+    from web.app import run_server
+
+    run_server(host=host, port=port, open_browser=open_browser)
+
+
+@cli.command("serve")
+@click.option(
+    "--host", default="0.0.0.0", help="Host interface to bind (default: 0.0.0.0)."
+)
+@click.option("--port", type=int, default=8765, help="Port to bind (default: 8765).")
+@click.option(
+    "--open-browser/--no-browser",
+    default=True,
+    help="Automatically open web browser.",
+)
+def serve_cmd(host: str, port: int, open_browser: bool) -> None:
+    """Launch MultiCloud Web Transfer Dashboard (Flask + Tailwind CSS)."""
+    from web.app import run_server
+
+    run_server(host=host, port=port, open_browser=open_browser)
+
+
+@cli.command("gui")
+@click.option(
+    "--host", default="0.0.0.0", help="Host interface to bind (default: 0.0.0.0)."
+)
+@click.option("--port", type=int, default=8765, help="Port to bind (default: 8765).")
+@click.option(
+    "--open-browser/--no-browser",
+    default=True,
+    help="Automatically open web browser.",
+)
+def gui_cmd(host: str, port: int, open_browser: bool) -> None:
+    """Launch MultiCloud Web Transfer Dashboard (alias for sf web)."""
+    from web.app import run_server
+
+    run_server(host=host, port=port, open_browser=open_browser)

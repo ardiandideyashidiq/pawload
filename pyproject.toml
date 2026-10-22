@@ -12,6 +12,7 @@ dependencies = [
     "asyncssh>=2.17.0",
     "curl-cffi>=0.16.3",
     "loguru>=0.7.3",
+    "flask>=3.0.0",
     "rich>=15.0.0",
     "rich-click>=1.9.9",
 ]
@@ -27,6 +28,8 @@ pixeldrain = "pixeldrain:main"
 pd = "pixeldrain:main"
 telegram = "telegram:main"
 tg = "telegram:main"
+web = "web:main"
+gui = "web:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -42,5 +45,5 @@ dev = [
 ignore = ["BLE001", "ASYNC230", "S324", "S110", "SIM115"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/sourceforge", "src/gofile", "src/vikingfile", "src/pixeldrain", "src/telegram"]
+packages = ["src/sourceforge", "src/gofile", "src/vikingfile", "src/pixeldrain", "src/telegram", "src/web"]
 

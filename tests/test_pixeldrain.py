@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from click.testing import CliRunner
 
 from pixeldrain.api import (
@@ -73,13 +74,18 @@ def test_pixeldrain_download_and_verify_live():
     with tempfile.TemporaryDirectory() as tmpdir:
         client = PixelDrainClient()
         dest_path = Path(tmpdir) / "test_agents.md"
-        dest = client.download(
-            "SCSZUyXG", output_path=dest_path, concurrency=2, verify_checksum=True
-        )
-        assert dest.is_file()
-        assert dest.stat().st_size == 6508
-        text = dest.read_text(encoding="utf-8")
-        assert "Panduan" in text
+        try:
+            dest = client.download(
+                "SCSZUyXG", output_path=dest_path, concurrency=2, verify_checksum=True
+            )
+            assert dest.is_file()
+            assert dest.stat().st_size == 6508
+            text = dest.read_text(encoding="utf-8")
+            assert "Panduan" in text
+        except RuntimeError as e:
+            if "403" in str(e) or "rate_limited" in str(e):
+                pytest.skip("Pixeldrain public rate limit / captcha required")
+            raise
 
 
 def test_pixeldrain_cli_help():

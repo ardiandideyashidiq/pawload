@@ -1,8 +1,9 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
-build/
-dist/
+/build/
+/dist/
+!src/web/dist/
 wheels/
 *.egg-info
 
@@ -13,3 +14,8 @@ wheels/
 .pytest_cache/
 .ruff_cache/
 *.sfdownload
+tmp/
+
+# Frontend node_modules & caches
+frontend/node_modules/
+frontend/.vite/
