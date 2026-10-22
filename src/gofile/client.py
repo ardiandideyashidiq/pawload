@@ -61,13 +61,19 @@ class GoFileClient:
             return self.token
 
         self.console.print("[dim]No GoFile token found; creating anonymous guest account...[/dim]")
-        account = create_guest_account()
-        self.token = account["token"]
-        cfg.token = self.token
-        cfg.account_id = account.get("account_id")
-        cfg.root_folder = account.get("root_folder")
-        cfg.save()
-        return self.token
+        try:
+            account = create_guest_account()
+            self.token = account["token"]
+            cfg.token = self.token
+            cfg.account_id = account.get("account_id")
+            cfg.root_folder = account.get("root_folder")
+            cfg.save()
+            return self.token
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to auto-create GoFile guest account ({e}). "
+                "Set your GoFile token via 'gf config set -t <token>' or env var GOFILE_TOKEN."
+            ) from e
 
     # --- Download ---
 
@@ -187,8 +193,8 @@ class GoFileClient:
         folder_id: str | None = None,
         progress_callback: Callable[[int, int], None] | None = None,
     ) -> UploadResult:
-        token = self.ensure_token()
-        return await asyncio.to_thread(
+        token = self.token or Config.load().token
+        res = await asyncio.to_thread(
             upload_file,
             file_path=file_path,
             token=token,
@@ -196,6 +202,13 @@ class GoFileClient:
             console=self.console,
             progress_callback=progress_callback,
         )
+        if res.guest_token:
+            self.token = res.guest_token
+            cfg = Config.load()
+            if not cfg.token:
+                cfg.token = res.guest_token
+                cfg.save()
+        return res
 
     def upload(
         self,
@@ -203,14 +216,21 @@ class GoFileClient:
         folder_id: str | None = None,
         progress_callback: Callable[[int, int], None] | None = None,
     ) -> UploadResult:
-        token = self.ensure_token()
-        return upload_file(
+        token = self.token or Config.load().token
+        res = upload_file(
             file_path=file_path,
             token=token,
             folder_id=folder_id,
             console=self.console,
             progress_callback=progress_callback,
         )
+        if res.guest_token:
+            self.token = res.guest_token
+            cfg = Config.load()
+            if not cfg.token:
+                cfg.token = res.guest_token
+                cfg.save()
+        return res
 
     # --- List ---
 
