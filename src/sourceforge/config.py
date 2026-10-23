@@ -10,12 +10,21 @@ from typing import Any
 def get_unified_config_file() -> Path:
     """Resolve active unified config file path."""
     env_path = (
-        os.environ.get("SCRAPER_CONFIG")
+        os.environ.get("PAWLOAD_CONFIG")
+        or os.environ.get("SCRAPER_CONFIG")
         or os.environ.get("MULTICLOUD_CONFIG")
         or os.environ.get("CONFIG_FILE")
     )
     if env_path:
         return Path(env_path).expanduser()
+
+    pawload_cfg = (
+        Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+        / "pawload"
+        / "config.toml"
+    )
+    if pawload_cfg.is_file():
+        return pawload_cfg
 
     scraper_cfg = (
         Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
@@ -25,15 +34,19 @@ def get_unified_config_file() -> Path:
     if scraper_cfg.is_file():
         return scraper_cfg
 
-    return (
+    sf_cfg = (
         Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
         / "sourceforge"
         / "config.toml"
     )
+    if sf_cfg.is_file():
+        return sf_cfg
+
+    return pawload_cfg
 
 
 CONFIG_DIR = (
-    Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "sourceforge"
+    Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "pawload"
 )
 CONFIG_FILE = get_unified_config_file()
 
