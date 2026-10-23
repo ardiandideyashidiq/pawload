@@ -15,7 +15,7 @@ from web.cli import cli as web_cli
 @pytest.fixture
 def temp_config_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     cfg = tmp_path / "config.toml"
-    monkeypatch.setenv("SCRAPER_CONFIG", str(cfg))
+    monkeypatch.setenv("PAWLOAD_CONFIG", str(cfg))
     return cfg
 
 
