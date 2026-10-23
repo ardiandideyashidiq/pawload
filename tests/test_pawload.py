@@ -10,6 +10,7 @@ def test_pawload_cli_help():
     result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
     assert "Pawload: Unified multi-cloud transfer" in result.output
+    assert "setup" in result.output
     assert "gofile" in result.output
     assert "pixeldrain" in result.output
     assert "sourceforge" in result.output
@@ -61,3 +62,48 @@ def test_pawload_config_path(tmp_path, monkeypatch):
     result = runner.invoke(cli, ["config", "path"])
     assert result.exit_code == 0
     assert str(cfg_file) in result.output
+
+
+def test_pawload_setup_interactive(tmp_path, monkeypatch):
+    import gofile.config as gf_cfg
+    import pixeldrain.config as pd_cfg
+    import sourceforge.config as sf_cfg
+    import telegram.config as tg_cfg
+    import vikingfile.config as vf_cfg
+
+    cfg_file = tmp_path / "pawload_config.toml"
+    monkeypatch.setattr(sf_cfg, "CONFIG_FILE", cfg_file)
+    monkeypatch.setattr(gf_cfg, "CONFIG_FILE", cfg_file)
+    monkeypatch.setattr(pd_cfg, "CONFIG_FILE", cfg_file)
+    monkeypatch.setattr(vf_cfg, "CONFIG_FILE", cfg_file)
+    monkeypatch.setattr(tg_cfg, "CONFIG_FILE", cfg_file)
+
+    runner = CliRunner()
+    # Provide inputs for:
+    # 1. global concurrency -> y, "8"
+    # 2. sourceforge -> y, "testuser", "testproj", "", "autoselect"
+    # 3. gofile -> y, "testtoken"
+    # 4. pixeldrain -> y, "testkey"
+    # 5. vikingfile -> y, "testhash"
+    # 6. telegram -> n
+    user_inputs = "\n".join([
+        "y", "8",
+        "y", "testuser", "testproj", "", "autoselect",
+        "y", "testtoken",
+        "y", "testkey",
+        "y", "testhash",
+        "n",
+    ]) + "\n"
+
+    result = runner.invoke(cli, ["setup"], input=user_inputs)
+    assert result.exit_code == 0
+    assert "All configuration saved successfully!" in result.output
+
+    # Verify persisted values
+    sections = sf_cfg.load_all_sections(config_file=cfg_file)
+    assert sections["global"]["concurrency"] == 8
+    assert sections["sourceforge"]["username"] == "testuser"
+    assert sections["sourceforge"]["project"] == "testproj"
+    assert sections["gofile"]["token"] == "testtoken"
+    assert sections["pixeldrain"]["api_key"] == "testkey"
+    assert sections["vikingfile"]["user"] == "testhash"
