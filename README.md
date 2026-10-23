@@ -1,7 +1,6 @@
 # pawload
 
-High-performance multi-cloud transfer engine, scraper CLI, and web dashboard for **SourceForge**, **GoFile**, **PixelDrain**, **VikingFile**, and **Telegram**.
-
+Multi-cloud transfer CLI, scraper, and web dashboard for **SourceForge**, **GoFile**, **PixelDrain**, **VikingFile**, and **Telegram**.
 ---
 
 ## Installation

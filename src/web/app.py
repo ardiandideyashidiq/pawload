@@ -28,7 +28,7 @@ from web.bridge import WebBridge, get_lan_ip
 
 
 def create_app(bridge: WebBridge | None = None, verbose: int = 0) -> Flask:
-    """Flask application factory for MultiCloud transfer manager."""
+    """Flask application factory for Pawload transfer manager."""
     pkg_dir = Path(__file__).parent
     dist_dir = pkg_dir / "dist"
     assets_dir = dist_dir / "assets"
@@ -91,9 +91,9 @@ def create_app(bridge: WebBridge | None = None, verbose: int = 0) -> Flask:
             return send_from_directory(dist_dir, "index.html")
 
         fallback_html = (
-            "<!doctype html><html><head><title>MultiCloud Transfer Manager</title></head>"
+            "<!doctype html><html><head><title>Pawload</title></head>"
             "<body style='font-family:system-ui,sans-serif;background:#090d16;color:#f1f5f9;padding:40px;'>"
-            "<h2 style='color:#38bdf8;'>MultiCloud Frontend Not Built</h2>"
+            "<h2 style='color:#38bdf8;'>Pawload Frontend Not Built</h2>"
             "<p>The compiled React bundle was not found in <code>src/web/dist</code>.</p>"
             "<p>To build it: <pre style='background:#1e293b;padding:12px;border-radius:6px;'>cd frontend && bun install && bun run build</pre></p>"
             "</body></html>"
@@ -172,8 +172,7 @@ def create_app(bridge: WebBridge | None = None, verbose: int = 0) -> Flask:
             file_obj = request.files["file"]
             if not file_obj or not file_obj.filename:
                 return jsonify({"error": "No file selected"}), 400
-
-            upload_dir = Path(tempfile.gettempdir()) / "multicloud_uploads"
+            upload_dir = Path(tempfile.gettempdir()) / "pawload_uploads"
             upload_dir.mkdir(parents=True, exist_ok=True)
             safe_name = (
                 secure_filename(file_obj.filename) or f"upload_{int(time.time())}.bin"
@@ -337,12 +336,12 @@ def run_server(
     console = Console()
     console.print(
         Panel(
-            f"[bold green]MultiCloud Transfer Manager Web Server Active[/bold green]\n\n"
+            f"[bold green]Pawload Web Server Active[/bold green]\n\n"
             f"  [>] [bold cyan]Local:[/bold cyan]    [link={local_url}]{local_url}[/link]\n"
             f"  [>] [bold cyan]Network:[/bold cyan]  [link={lan_url}]{lan_url}[/link]\n\n"
             f"[dim]Flask server with Tailwind CSS & shadcn components.[/dim]\n"
             f"[dim]Press [bold]Ctrl+C[/bold] to stop server.[/dim]",
-            title="MultiCloud Web App",
+            title="Pawload Web App",
             border_style="cyan",
         )
     )
@@ -356,4 +355,4 @@ def run_server(
     try:
         run_simple(host, port, app, threaded=True, use_reloader=False)
     except KeyboardInterrupt:
-        console.print("\n[yellow]Stopping MultiCloud web server...[/yellow]")
+        console.print("\n[yellow]Stopping Pawload web server...[/yellow]")

@@ -42,7 +42,7 @@ def cli(
     port: int,
     open_browser: bool,
 ) -> None:
-    """MultiCloud Web App (Flask + Tailwind CSS + shadcn components)."""
+    """Pawload Web App (Flask + Tailwind CSS + shadcn components)."""
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
     setup_logging(verbose)

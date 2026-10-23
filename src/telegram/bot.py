@@ -27,7 +27,7 @@ def detect_provider(url: str) -> str | None:
 
 async def start_handler(message: types.Message) -> None:
     text = (
-        "<b>Welcome to Multi-Cloud Transfer Bot!</b>\n\n"
+        "<b>Welcome to Pawload Bot!</b>\n\n"
         "Supported providers:\n"
         "- <b>SourceForge</b> (sf.net)\n"
         "- <b>GoFile</b> (gofile.io)\n"

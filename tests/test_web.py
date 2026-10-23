@@ -26,7 +26,7 @@ def test_assets_exist() -> None:
 
     assert index_html.is_file()
     content = index_html.read_text(encoding="utf-8")
-    assert "MultiCloud" in content
+    assert "Pawload" in content
     assert "dark" in content
 
     assets = list((dist_dir / "assets").glob("*.js"))
@@ -113,7 +113,7 @@ def test_flask_routes(temp_config_file: Path, tmp_path: Path) -> None:
     # Index page
     resp = client.get("/")
     assert resp.status_code == 200
-    assert b"MultiCloud" in resp.data
+    assert b"Pawload" in resp.data
 
     # Config API
     resp = client.get("/api/config")
@@ -195,7 +195,7 @@ def test_cli_help() -> None:
     runner = CliRunner()
     res = runner.invoke(web_cli, ["--help"])
     assert res.exit_code == 0
-    assert "MultiCloud Web App" in res.output
+    assert "Pawload Web App" in res.output
 
     res_serve = runner.invoke(web_cli, ["serve", "--help"])
     assert res_serve.exit_code == 0
@@ -203,7 +203,7 @@ def test_cli_help() -> None:
 
     res_sf = runner.invoke(sf_cli, ["web", "--help"])
     assert res_sf.exit_code == 0
-    assert "Flask + Tailwind CSS" in res_sf.output
+    assert "Pawload Web Transfer Dashboard" in res_sf.output
 
 
 def test_flask_fallback_when_dist_missing(
@@ -219,7 +219,7 @@ def test_flask_fallback_when_dist_missing(
         client = app.test_client()
         resp = client.get("/")
         assert resp.status_code == 200
-        assert b"MultiCloud Frontend Not Built" in resp.data
+        assert b"Pawload Frontend Not Built" in resp.data
 
 
 def test_flask_upload_file_multipart(tmp_path: Path) -> None:

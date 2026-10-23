@@ -470,7 +470,7 @@ def config_set(
 def web_cmd(
     ctx: click.Context, verbose: int, host: str, port: int, open_browser: bool
 ) -> None:
-    """Launch MultiCloud Web Transfer Dashboard (Flask + Tailwind CSS)."""
+    """Launch Pawload Web Transfer Dashboard (Flask + Tailwind CSS)."""
     from web.app import run_server
 
     effective_verbose = verbose or (ctx.obj.get("verbose", 0) if ctx.obj else 0)
@@ -500,7 +500,7 @@ def web_cmd(
 def serve_cmd(
     ctx: click.Context, verbose: int, host: str, port: int, open_browser: bool
 ) -> None:
-    """Launch MultiCloud Web Transfer Dashboard (Flask + Tailwind CSS)."""
+    """Launch Pawload Web Transfer Dashboard (Flask + Tailwind CSS)."""
     from web.app import run_server
 
     effective_verbose = verbose or (ctx.obj.get("verbose", 0) if ctx.obj else 0)
@@ -530,7 +530,7 @@ def serve_cmd(
 def gui_cmd(
     ctx: click.Context, verbose: int, host: str, port: int, open_browser: bool
 ) -> None:
-    """Launch MultiCloud Web Transfer Dashboard (alias for sf web)."""
+    """Launch Pawload Web Transfer Dashboard (alias for sf web)."""
     from web.app import run_server
 
     effective_verbose = verbose or (ctx.obj.get("verbose", 0) if ctx.obj else 0)

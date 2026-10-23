@@ -1,4 +1,4 @@
-"""MultiCloud Transfer Manager Web App (Flask + Tailwind CSS + shadcn UI)."""
+"""Pawload Transfer Manager Web App (Flask + Tailwind CSS + shadcn UI)."""
 
 from web.app import create_app, run_server
 from web.bridge import WebBridge

@@ -6,7 +6,7 @@ Comprehensive developer guidelines, architecture overview, and code conventions 
 
 ## Project Overview
 
-**Pawload** is a unified Python 3.13+ multi-cloud file transfer engine, scraper, CLI, and web dashboard. It orchestrates high-speed parallel chunked downloads (with stateful resume), streaming uploads, remote file management, and real-time progress reporting across multiple cloud storage providers:
+**Pawload** is a Python 3.13+ multi-cloud file transfer CLI, scraper, and web dashboard. It supports parallel chunked downloads (with stateful resume), streaming uploads, remote file management, and progress reporting across multiple cloud storage providers:
 - **SourceForge**: FRS file management, native SFTP uploads, live mirror probe/selection, and chunked downloads with RSS checksum verification.
 - **GoFile**: Chunked multipart streaming uploads, folder browsing, guest token windowing, and multi-threaded downloads.
 - **PixelDrain**: Direct uploads, chunked downloads, metadata checks, and list management.
