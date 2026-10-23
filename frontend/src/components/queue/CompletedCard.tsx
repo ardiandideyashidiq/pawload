@@ -1,4 +1,5 @@
-import { CheckCircle2, FolderOpen, Info, XCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Check, CheckCircle2, Copy, FolderOpen, Info, XCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -36,7 +37,15 @@ export function CompletedCard({ transfer, onOpen, onSelect }: CompletedCardProps
   const isSuccess = transfer.status === 'completed'
   const isError = transfer.status === 'error'
   const isCancelled = transfer.status === 'cancelled'
+  const [copied, setCopied] = useState(false)
 
+  const handleCopyLink = () => {
+    if (transfer.result_url) {
+      navigator.clipboard.writeText(transfer.result_url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
   return (
     <Card className="border-border bg-card/50 hover:bg-card/80 transition-colors">
       <CardContent className="p-3 flex items-center justify-between gap-3">
@@ -69,6 +78,27 @@ export function CompletedCard({ transfer, onOpen, onSelect }: CompletedCardProps
         </div>
 
         <div className="flex items-center space-x-2 shrink-0">
+          {transfer.result_url && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyLink}
+              title="Copy share link"
+              className="h-7 text-xs"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 mr-1 text-emerald-400" />
+                  <span className="text-emerald-400">Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+                  <span>Copy Link</span>
+                </>
+              )}
+            </Button>
+          )}
           {onSelect && (
             <Button
               variant="ghost"
@@ -82,7 +112,6 @@ export function CompletedCard({ transfer, onOpen, onSelect }: CompletedCardProps
           )}
           {isSuccess && transfer.dest_path && (
             <Button
-              variant="outline"
               size="sm"
               onClick={() => onOpen(transfer.id)}
               className="h-7 text-xs"

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, Download, Inbox } from 'lucide-react'
+import { Download, Inbox, Trash2 } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { StatusBar } from '@/components/layout/StatusBar'
 import { TransferHub } from '@/components/hub/TransferHub'
@@ -30,6 +30,7 @@ export default function App() {
     handleResume,
     handleCancel,
     handleOpen,
+    clearCompleted,
   } = useTransfers()
 
   const liveSelectedTransfer = useMemo(() => {
@@ -65,41 +66,22 @@ export default function App() {
 
         {/* Content Body */}
         <main className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Main View Segmented Header */}
+          {/* Header row with section title & actions */}
           <div className="flex items-center justify-between border-b border-border/40 pb-2">
-            <div className="flex items-center space-x-2">
+            <h2 className="text-xs font-semibold text-foreground uppercase tracking-wider font-mono">
+              {tab === 'transfers' ? `Active Queue (${activeTransfers.length})` : `Finished History (${completedTransfers.length})`}
+            </h2>
+            {tab === 'completed' && completedTransfers.length > 0 && (
               <button
-                onClick={() => setTab('transfers')}
-                className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  tab === 'transfers'
-                    ? 'bg-secondary text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-secondary/40 hover:text-foreground'
-                }`}
+                onClick={clearCompleted}
+                className="flex items-center space-x-1.5 px-2.5 py-1 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors cursor-pointer"
+                title="Clear finished and cancelled history"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>Active Queue</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-background/50 border border-border">
-                  {activeTransfers.length}
-                </span>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear Finished</span>
               </button>
-
-              <button
-                onClick={() => setTab('completed')}
-                className={`flex items-center space-x-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  tab === 'completed'
-                    ? 'bg-secondary text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-secondary/40 hover:text-foreground'
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Finished History</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-background/50 border border-border">
-                  {completedTransfers.length}
-                </span>
-              </button>
-            </div>
+            )}
           </div>
-
           {/* Tab Content */}
           {tab === 'transfers' ? (
             activeTransfers.length > 0 ? (

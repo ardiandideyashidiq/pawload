@@ -45,8 +45,8 @@ export function TransferHub({ onTransferStarted }: TransferHubProps) {
   // Upload states
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadProvider, setUploadProvider] = useState<string>('gofile')
-  const [folderId, setFolderId] = useState<string>('')
-
+  const [remotePath, setRemotePath] = useState<string>('')
+  const [isDragging, setIsDragging] = useState(false)
   const handleInspect = async () => {
     if (!target.trim()) return
     setInspecting(true)
@@ -90,10 +90,11 @@ export function TransferHub({ onTransferStarted }: TransferHubProps) {
       const fd = new FormData()
       fd.append('file', uploadFile)
       fd.append('provider', uploadProvider)
-      if (folderId.trim()) fd.append('folder_id', folderId.trim())
+      if (remotePath.trim()) fd.append('remote_path', remotePath.trim())
 
       await startUpload(fd)
       setUploadFile(null)
+      setRemotePath('')
       onTransferStarted()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to start upload')
@@ -258,9 +259,23 @@ export function TransferHub({ onTransferStarted }: TransferHubProps) {
           /* Upload Mode */
           <div className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              <div className="relative border border-input rounded-md p-2 bg-background/50 flex items-center justify-between">
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setIsDragging(true)
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setIsDragging(false)
+                  if (e.dataTransfer.files?.[0]) setUploadFile(e.dataTransfer.files[0])
+                }}
+                className={`relative border rounded-md p-2 bg-background/50 flex items-center justify-between transition-colors ${
+                  isDragging ? 'border-primary ring-1 ring-primary bg-primary/5' : 'border-input'
+                }`}
+              >
                 <span className="text-xs truncate max-w-[180px] font-mono">
-                  {uploadFile ? uploadFile.name : 'Choose local file...'}
+                  {uploadFile ? uploadFile.name : 'Choose or drop local file...'}
                 </span>
                 <label className="cursor-pointer">
                   <input
@@ -284,17 +299,24 @@ export function TransferHub({ onTransferStarted }: TransferHubProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="gofile">GoFile</SelectItem>
-                    <SelectItem value="vikingfile">VikingFile</SelectItem>
+                    <SelectItem value="sourceforge">SourceForge (SFTP)</SelectItem>
                     <SelectItem value="pixeldrain">PixelDrain</SelectItem>
+                    <SelectItem value="vikingfile">VikingFile</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="flex gap-2">
                 <Input
-                  placeholder="Folder ID (optional)"
-                  value={folderId}
-                  onChange={(e) => setFolderId(e.target.value)}
+                  placeholder={
+                    uploadProvider === 'sourceforge'
+                      ? 'Remote folder (e.g. release)'
+                      : uploadProvider === 'gofile'
+                        ? 'Folder ID (optional)'
+                        : 'Subfolder path (optional)'
+                  }
+                  value={remotePath}
+                  onChange={(e) => setRemotePath(e.target.value)}
                   className="font-mono text-xs"
                 />
                 <Button

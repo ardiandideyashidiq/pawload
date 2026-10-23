@@ -149,7 +149,16 @@ export function useTransfers() {
     }
   }, [])
 
+  const clearCompleted = useCallback(() => {
+    setTransfers((prev) =>
+      prev.filter(
+        (t) => t.status === 'running' || t.status === 'queued' || t.status === 'paused'
+      )
+    )
+  }, [])
+
   return {
+    clearCompleted,
     transfers,
     activeTransfers,
     completedTransfers,

@@ -240,6 +240,26 @@ def create_app(bridge: WebBridge | None = None, verbose: int = 0) -> Flask:
         ok = br.open_path(p)
         return jsonify({"success": ok})
 
+    @app.route("/api/telegram/test", methods=["POST"])
+    def handle_telegram_test() -> Any:
+        from telegram.client import TelegramClient
+        try:
+            body = request.get_json(silent=True) or {}
+            token = body.get("bot_token")
+            chat_id = body.get("chat_id")
+            thread_id = body.get("thread_id")
+            tg = TelegramClient(bot_token=token, chat_id=chat_id, thread_id=thread_id)
+            info = tg.get_me()
+            if tg.chat_id:
+                tg.send_message("[ping] <b>Ping:</b> Web GUI Telegram connectivity verified!")
+            return jsonify({
+                "success": True,
+                "bot_username": info.get("username"),
+                "first_name": info.get("first_name"),
+            })
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 400
+
     @app.route("/api/events")
     def handle_events() -> Response:
         br: WebBridge = app.config["BRIDGE"]

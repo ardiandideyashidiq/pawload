@@ -11,7 +11,7 @@ export function StatusBar({ activeCount, connected, configPath }: StatusBarProps
         <span className="flex items-center space-x-1.5">
           <span
             className={`w-2 h-2 rounded-full ${
-              connected ? 'bg-emerald-500 animate-pulse' : 'bg-destructive'
+              connected ? 'bg-emerald-500' : 'bg-destructive'
             }`}
           />
           <span>{connected ? 'Backend Online' : 'Connecting to daemon...'}</span>

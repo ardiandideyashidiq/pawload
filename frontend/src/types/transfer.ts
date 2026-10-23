@@ -17,6 +17,7 @@ export interface TransferRecord {
   concurrency: number
   mirror?: string | null
   error?: string | null
+  result_url?: string | null
   created_at: number
   updated_at: number
 }

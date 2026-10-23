@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, Loader2 } from 'lucide-react'
+import { Check, CheckCircle2, Loader2, Send, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,13 +22,46 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const { config, saving, update } = useConfig()
   const [formData, setFormData] = useState<ConfigData>({})
   const [success, setSuccess] = useState(false)
-
+  const [testingTg, setTestingTg] = useState(false)
+  const [tgResult, setTgResult] = useState<{ ok?: boolean; message?: string } | null>(null)
   useEffect(() => {
     if (open) {
       setFormData(config)
       setSuccess(false)
+      setTgResult(null)
     }
   }, [open, config])
+
+  const handleTestTelegram = async () => {
+    setTestingTg(true)
+    setTgResult(null)
+    try {
+      const res = await fetch('/api/telegram/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData.telegram || {}),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setTgResult({
+          ok: true,
+          message: `Connected as @${data.bot_username || 'bot'}. Sent test ping!`,
+        })
+      } else {
+        setTgResult({
+          ok: false,
+          message: data.error || 'Connection failed',
+        })
+      }
+    } catch (err: unknown) {
+      setTgResult({
+        ok: false,
+        message: err instanceof Error ? err.message : 'Network error',
+      })
+    } finally {
+      setTestingTg(false)
+    }
+  }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -211,7 +244,42 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
           {/* Telegram Notifications */}
           <div className="space-y-3 border-t border-border pt-4">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-sky-400">Telegram Bot Notifications</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-sky-400">Telegram Bot Notifications</h4>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleTestTelegram}
+                disabled={testingTg || !formData.telegram?.bot_token}
+                className="h-7 text-xs"
+              >
+                {testingTg ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                ) : (
+                  <Send className="w-3.5 h-3.5 mr-1 text-sky-400" />
+                )}
+                Test Bot
+              </Button>
+            </div>
+
+            {tgResult && (
+              <div
+                className={`p-2 rounded-md text-xs flex items-center space-x-1.5 ${
+                  tgResult.ok
+                    ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                    : 'bg-destructive/10 border border-destructive/20 text-destructive'
+                }`}
+              >
+                {tgResult.ok ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                ) : (
+                  <XCircle className="w-3.5 h-3.5 shrink-0" />
+                )}
+                <span>{tgResult.message}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">Bot Token</label>

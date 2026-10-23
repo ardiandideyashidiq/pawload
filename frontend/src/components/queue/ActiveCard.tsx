@@ -72,9 +72,11 @@ export function ActiveCard({ transfer, onPause, onResume, onCancel, onSelect }: 
                 )}
                 {transfer.type}
               </span>
-              <span className="text-[10px] font-mono text-muted-foreground">
-                • {transfer.concurrency} workers
-              </span>
+              {transfer.type === 'download' && transfer.concurrency && (
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  • {transfer.concurrency} workers
+                </span>
+              )}
             </div>
             <h4
               onClick={() => onSelect?.(transfer)}
@@ -135,8 +137,14 @@ export function ActiveCard({ transfer, onPause, onResume, onCancel, onSelect }: 
         {/* Progress bar container */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="font-semibold text-foreground">
-              {transfer.progress_percent.toFixed(1)}%
+            <span className="font-semibold text-foreground flex items-center gap-1.5">
+              {transfer.type === 'upload' && isRunning && transfer.progress_percent <= 0 ? (
+                <>
+                  <span className="text-emerald-400 font-medium">Streaming payload...</span>
+                </>
+              ) : (
+                <span>{transfer.progress_percent.toFixed(1)}%</span>
+              )}
             </span>
             <span className="text-muted-foreground">
               {formatBytes(transfer.completed_bytes)} / {formatBytes(transfer.total_bytes)}
@@ -144,24 +152,29 @@ export function ActiveCard({ transfer, onPause, onResume, onCancel, onSelect }: 
           </div>
 
           <Progress
-            value={transfer.progress_percent}
+            value={
+              transfer.type === 'upload' && isRunning && transfer.progress_percent <= 0
+                ? 100
+                : transfer.progress_percent
+            }
             className="h-3 bg-secondary/80 border border-border/80"
             indicatorClassName={
               isRunning
-                ? 'striped-bar bg-primary shadow-sm'
+                ? transfer.type === 'upload' && transfer.progress_percent <= 0
+                  ? 'striped-bar bg-emerald-500/80'
+                  : 'striped-bar bg-primary shadow-sm'
                 : isPaused
                   ? 'bg-amber-500'
                   : 'bg-primary'
             }
           />
         </div>
-
         {/* Footer info: speed, ETA, status */}
         <div className="flex items-center justify-between text-xs font-mono text-muted-foreground pt-0.5">
           <div className="flex items-center space-x-3">
             {isRunning && (
-              <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
+              <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
                 {formatSpeed(transfer.speed_bps)}
               </span>
             )}
