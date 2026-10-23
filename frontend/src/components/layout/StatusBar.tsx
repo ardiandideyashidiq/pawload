@@ -21,7 +21,7 @@ export function StatusBar({ activeCount, connected, configPath }: StatusBarProps
       </div>
 
       <div className="truncate max-w-sm" title={configPath || 'config.toml'}>
-        Config: {configPath || '~/.config/sourceforge/config.toml'}
+        Config: {configPath || '~/.config/pawload/config.toml'}
       </div>
     </footer>
   )

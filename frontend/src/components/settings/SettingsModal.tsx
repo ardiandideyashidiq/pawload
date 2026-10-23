@@ -50,7 +50,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         <DialogHeader>
           <DialogTitle>Transfer & Provider Settings</DialogTitle>
           <DialogDescription>
-            Configuration stored at unified <code className="font-mono text-xs">{config.config_path || '~/.config/sourceforge/config.toml'}</code>
+            Configuration stored at unified <code className="font-mono text-xs">{config.config_path || config.path || '~/.config/pawload/config.toml'}</code>
           </DialogDescription>
         </DialogHeader>
 
@@ -79,13 +79,13 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                   type="number"
                   min="1"
                   max="32"
-                  value={formData.global?.default_concurrency || 8}
+                  value={formData.global?.concurrency || 4}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
                       global: {
                         ...prev.global,
-                        default_concurrency: parseInt(e.target.value, 10) || 8,
+                        concurrency: parseInt(e.target.value, 10) || 4,
                       },
                     }))
                   }
@@ -114,6 +114,34 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 />
               </div>
               <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Default Project</label>
+                <Input
+                  value={formData.sourceforge?.project || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      sourceforge: { ...prev.sourceforge, project: e.target.value },
+                    }))
+                  }
+                  placeholder="e.g. my-project"
+                  className="text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">SSH Key Path</label>
+                <Input
+                  value={formData.sourceforge?.key_path || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      sourceforge: { ...prev.sourceforge, key_path: e.target.value },
+                    }))
+                  }
+                  placeholder="~/.ssh/id_ed25519"
+                  className="font-mono text-xs"
+                />
+              </div>
+              <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">Default Mirror</label>
                 <Input
                   value={formData.sourceforge?.default_mirror || ''}
@@ -123,7 +151,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       sourceforge: { ...prev.sourceforge, default_mirror: e.target.value },
                     }))
                   }
-                  placeholder="e.g. master, autonumber"
+                  placeholder="e.g. master, autoselect"
                   className="font-mono text-xs"
                 />
               </div>
@@ -135,32 +163,31 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">API Credentials</h4>
             <div className="space-y-2">
               <div className="space-y-1">
-                <label className="text-xs text-emerald-400">GoFile API Token</label>
+                <label className="text-xs text-emerald-400">GoFile Account Token</label>
                 <Input
                   type="password"
-                  value={formData.gofile?.api_token || ''}
+                  value={formData.gofile?.token || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      gofile: { ...prev.gofile, api_token: e.target.value },
+                      gofile: { ...prev.gofile, token: e.target.value },
                     }))
                   }
-                  placeholder="Token"
+                  placeholder="Token (optional, auto-guest if omitted)"
                   className="font-mono text-xs"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs text-purple-400">VikingFile API Key</label>
+                <label className="text-xs text-purple-400">VikingFile User Account Hash</label>
                 <Input
-                  type="password"
-                  value={formData.vikingfile?.api_key || ''}
+                  value={formData.vikingfile?.user || ''}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      vikingfile: { ...prev.vikingfile, api_key: e.target.value },
+                      vikingfile: { ...prev.vikingfile, user: e.target.value },
                     }))
                   }
-                  placeholder="Key"
+                  placeholder="User Hash (optional)"
                   className="font-mono text-xs"
                 />
               </div>
@@ -211,7 +238,44 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       telegram: { ...prev.telegram, chat_id: e.target.value },
                     }))
                   }
-                  placeholder="e.g. -100123456789"
+                  placeholder="e.g. 6665891737"
+                  className="font-mono text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Topic Thread ID (Optional)</label>
+                <Input
+                  type="number"
+                  value={formData.telegram?.thread_id || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      telegram: {
+                        ...prev.telegram,
+                        thread_id: e.target.value ? parseInt(e.target.value, 10) : undefined,
+                      },
+                    }))
+                  }
+                  placeholder="e.g. 1"
+                  className="font-mono text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Throttle Interval (Seconds)</label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  min="0.5"
+                  value={formData.telegram?.throttle_interval || 2.0}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      telegram: {
+                        ...prev.telegram,
+                        throttle_interval: parseFloat(e.target.value) || 2.0,
+                      },
+                    }))
+                  }
                   className="font-mono text-xs"
                 />
               </div>

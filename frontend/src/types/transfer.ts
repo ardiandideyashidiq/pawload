@@ -31,31 +31,45 @@ export interface InspectResult {
 }
 
 export interface ConfigData {
+  path?: string
   config_path?: string
   global?: {
+    concurrency?: number
+    download_dir?: string
+    chunk_size?: number
     user_agent?: string
     timeout?: number
-    default_concurrency?: number
-    chunk_size?: number
-    download_dir?: string
   }
   sourceforge?: {
     username?: string
-    api_key?: string
+    project?: string
+    key_path?: string
     default_mirror?: string
+    concurrency?: number
+    chunk_size?: number
   }
   gofile?: {
-    api_token?: string
+    token?: string
+    account_id?: string
+    root_folder?: string
+    concurrency?: number
+    chunk_size?: number
   }
   vikingfile?: {
-    api_key?: string
+    user?: string
+    concurrency?: number
+    chunk_size?: number
   }
   pixeldrain?: {
     api_key?: string
+    concurrency?: number
+    chunk_size?: number
   }
   telegram?: {
     bot_token?: string
     chat_id?: string
-    progress_frequency?: number
+    thread_id?: number
+    throttle_interval?: number
+    parse_mode?: string
   }
 }

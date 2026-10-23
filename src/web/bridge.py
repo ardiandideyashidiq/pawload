@@ -90,20 +90,21 @@ class WebBridge:
         """Return the current unified configuration file path and all sections."""
         cfg_file = get_unified_config_file()
         sections = load_all_sections(cfg_file)
-        return {
-            "path": str(cfg_file),
-            "config": sections,
-        }
+        # Return both flat sections and nested shape for backward and GUI compatibility
+        payload = dict(sections)
+        payload["path"] = str(cfg_file)
+        payload["config_path"] = str(cfg_file)
+        payload["config"] = sections
+        return payload
 
     def save_config_section(self, section: str, data: dict[str, Any]) -> bool:
         """Save a specific configuration section atomically to unified config.toml."""
         try:
-            save_section(section, data)
+            save_section(section, data, config_file=get_unified_config_file())
             return True
         except Exception as e:
             logger.error(f"Error saving config section '{section}': {e}")
             return False
-
     # --- Target Inspection & Metadata ---
 
     def inspect_target(self, target: str) -> dict[str, Any]:
