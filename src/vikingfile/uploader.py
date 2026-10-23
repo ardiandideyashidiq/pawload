@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-
 from curl_cffi import requests
 from curl_cffi.curl import CurlMime
 from rich.console import Console
@@ -24,6 +24,7 @@ def upload_file(
     user: str = "",
     remote_path: str = "",
     console: Console | None = None,
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> UploadResult:
     con = console or Console()
     path = Path(file_path).resolve()

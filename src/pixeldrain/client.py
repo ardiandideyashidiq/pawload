@@ -63,19 +63,29 @@ class PixelDrainClient:
 
     # --- Upload ---
 
-    async def upload_async(self, file_path: str | Path) -> UploadResult:
+    async def upload_async(
+        self,
+        file_path: str | Path,
+        progress_callback: Callable[[int, int], None] | None = None,
+    ) -> UploadResult:
         return await asyncio.to_thread(
             upload_file,
             file_path=file_path,
             api_key=self.api_key,
             console=self.console,
+            progress_callback=progress_callback,
         )
 
-    def upload(self, file_path: str | Path) -> UploadResult:
+    def upload(
+        self,
+        file_path: str | Path,
+        progress_callback: Callable[[int, int], None] | None = None,
+    ) -> UploadResult:
         return upload_file(
             file_path=file_path,
             api_key=self.api_key,
             console=self.console,
+            progress_callback=progress_callback,
         )
 
     # --- Delete ---

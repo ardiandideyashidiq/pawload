@@ -56,6 +56,7 @@ class VikingFileClient:
         self,
         file_path: str | Path,
         remote_path: str = "",
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> UploadResult:
         return await asyncio.to_thread(
             upload_file,
@@ -63,18 +64,21 @@ class VikingFileClient:
             user=self.user,
             remote_path=remote_path,
             console=self.console,
+            progress_callback=progress_callback,
         )
 
     def upload(
         self,
         file_path: str | Path,
         remote_path: str = "",
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> UploadResult:
         return upload_file(
             file_path=file_path,
             user=self.user,
             remote_path=remote_path,
             console=self.console,
+            progress_callback=progress_callback,
         )
 
     # --- Check / Info ---
