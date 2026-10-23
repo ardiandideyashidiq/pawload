@@ -27,12 +27,12 @@ def detect_provider(url: str) -> str | None:
 
 async def start_handler(message: types.Message) -> None:
     text = (
-        "👋 <b>Welcome to Multi-Cloud Transfer Bot!</b>\n\n"
+        "<b>Welcome to Multi-Cloud Transfer Bot!</b>\n\n"
         "Supported providers:\n"
-        "• <b>SourceForge</b> (sf.net)\n"
-        "• <b>GoFile</b> (gofile.io)\n"
-        "• <b>VikingFile</b> (vikingfile.com)\n"
-        "• <b>Pixeldrain</b> (pixeldrain.com)\n\n"
+        "- <b>SourceForge</b> (sf.net)\n"
+        "- <b>GoFile</b> (gofile.io)\n"
+        "- <b>VikingFile</b> (vikingfile.com)\n"
+        "- <b>Pixeldrain</b> (pixeldrain.com)\n\n"
         "<b>Commands:</b>\n"
         "/info &lt;url&gt; - Inspect cloud file metadata\n"
         "/download &lt;url&gt; - Download file to host server\n"
@@ -55,11 +55,11 @@ async def info_handler(message: types.Message) -> None:
 
     if not provider:
         await message.reply(
-            "❌ Unsupported URL. Supported: SourceForge, GoFile, VikingFile, Pixeldrain."
+            "[error] Unsupported URL. Supported: SourceForge, GoFile, VikingFile, Pixeldrain."
         )
         return
 
-    status_msg = await message.reply(f"🔍 Querying {provider.capitalize()} metadata...")
+    status_msg = await message.reply(f"[info] Querying {provider.capitalize()} metadata...")
 
     try:
         if provider == "pixeldrain":
@@ -69,7 +69,7 @@ async def info_handler(message: types.Message) -> None:
             client = PixeldrainClient()
             info = client.get_info(url)
             text = (
-                "📦 <b>Pixeldrain File</b>\n\n"
+                "<b>[pixeldrain] File</b>\n\n"
                 f"<b>Name:</b> {info.name}\n"
                 f"<b>Size:</b> {format_size(info.size)}\n"
                 f"<b>ID:</b> <code>{info.id}</code>\n"
@@ -86,11 +86,11 @@ async def info_handler(message: types.Message) -> None:
             info = client.check(url)
             if not info or not info.exist:
                 await status_msg.edit_text(
-                    "❌ VikingFile: File does not exist or was deleted."
+                    "[error] VikingFile: File does not exist or was deleted."
                 )
                 return
             text = (
-                "📦 <b>VikingFile Details</b>\n\n"
+                "<b>[vikingfile] Details</b>\n\n"
                 f"<b>Name:</b> {info.name}\n"
                 f"<b>Size:</b> {format_size(info.size)}\n"
                 f"<b>Hash:</b> <code>{info.hash}</code>\n"
@@ -105,7 +105,7 @@ async def info_handler(message: types.Message) -> None:
             client = GoFileClient()
             file_info = client.get_file_info(url)
             text = (
-                "📦 <b>GoFile Details</b>\n\n"
+                "<b>[gofile] Details</b>\n\n"
                 f"<b>Name:</b> {file_info.name}\n"
                 f"<b>Size:</b> {format_size(file_info.size)}\n"
                 f"<b>ID:</b> <code>{file_info.id}</code>\n"
@@ -116,7 +116,7 @@ async def info_handler(message: types.Message) -> None:
         elif provider == "sourceforge":
             direct_url, filename, _total_size, md5 = client.resolve_download(url)
             text = (
-                "📦 <b>SourceForge File</b>\n\n"
+                "<b>[sourceforge] File</b>\n\n"
                 f"<b>Filename:</b> {filename}\n"
                 f"<b>Direct URL:</b> {direct_url}\n"
             )
@@ -127,7 +127,7 @@ async def info_handler(message: types.Message) -> None:
     except Exception as e:
         logger.exception("Info query failed")
         await status_msg.edit_text(
-            f"❌ Error querying {provider}: <code>{e}</code>", parse_mode=ParseMode.HTML
+            f"[error] Error querying {provider}: <code>{e}</code>", parse_mode=ParseMode.HTML
         )
 
 
@@ -139,14 +139,14 @@ async def document_handler(message: types.Message, bot: Bot) -> None:
     # Telegram bot API limits getFile downloads to 20MB
     if doc.file_size and doc.file_size > 20 * 1024 * 1024:
         await message.reply(
-            "⚠️ File size exceeds Telegram Bot API's 20 MB download limit for standard bot tokens.",
+            "[warn] File size exceeds Telegram Bot API's 20 MB download limit for standard bot tokens.",
             parse_mode=ParseMode.HTML,
         )
         return
 
     file_name = doc.file_name or "uploaded_file"
     status_msg = await message.reply(
-        f"⏳ Downloading <b>{file_name}</b> from Telegram...", parse_mode=ParseMode.HTML
+        f"[info] Downloading <b>{file_name}</b> from Telegram...", parse_mode=ParseMode.HTML
     )
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -155,13 +155,13 @@ async def document_handler(message: types.Message, bot: Bot) -> None:
             file_obj = await bot.get_file(doc.file_id)
             if not file_obj.file_path:
                 await status_msg.edit_text(
-                    "❌ Failed to obtain file path from Telegram."
+                    "[error] Failed to obtain file path from Telegram."
                 )
                 return
 
             await bot.download_file(file_obj.file_path, destination=dest_path)
             await status_msg.edit_text(
-                f"🚀 Uploading <b>{file_name}</b> to GoFile...",
+                f"[upload] Uploading <b>{file_name}</b> to GoFile...",
                 parse_mode=ParseMode.HTML,
             )
 
@@ -171,7 +171,7 @@ async def document_handler(message: types.Message, bot: Bot) -> None:
             result = gf_client.upload(dest_path)
 
             success_text = (
-                "✅ <b>Upload Complete!</b>\n\n"
+                "[ok] <b>Upload Complete!</b>\n\n"
                 f"<b>File:</b> {file_name}\n"
                 f"<b>Provider:</b> GoFile\n"
                 f"<b>Download Link:</b> {result.download_page}\n"
@@ -181,7 +181,7 @@ async def document_handler(message: types.Message, bot: Bot) -> None:
         except Exception as e:
             logger.exception("Document handling error")
             await status_msg.edit_text(
-                f"❌ Upload failed: <code>{e}</code>", parse_mode=ParseMode.HTML
+                f"[error] Upload failed: <code>{e}</code>", parse_mode=ParseMode.HTML
             )
 
 

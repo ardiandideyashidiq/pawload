@@ -64,7 +64,7 @@ def upload_file(
 
     file_id = res_data["id"]
     share_url = f"https://pixeldrain.com/u/{file_id}"
-    con.print(f"[bold green]✓ Upload complete:[/bold green] {share_url}")
+    con.print(f"[bold green][ok] Upload complete:[/bold green] {share_url}")
     return UploadResult(
         id=file_id,
         url=share_url,

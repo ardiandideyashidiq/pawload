@@ -315,11 +315,11 @@ def run_server(
     console.print(
         Panel(
             f"[bold green]MultiCloud Transfer Manager Web Server Active[/bold green]\n\n"
-            f"  ➜ [bold cyan]Local:[/bold cyan]    [link={local_url}]{local_url}[/link]\n"
-            f"  ➜ [bold cyan]Network:[/bold cyan]  [link={lan_url}]{lan_url}[/link]\n\n"
+            f"  [>] [bold cyan]Local:[/bold cyan]    [link={local_url}]{local_url}[/link]\n"
+            f"  [>] [bold cyan]Network:[/bold cyan]  [link={lan_url}]{lan_url}[/link]\n\n"
             f"[dim]Flask server with Tailwind CSS & shadcn components.[/dim]\n"
             f"[dim]Press [bold]Ctrl+C[/bold] to stop server.[/dim]",
-            title="⚡ MultiCloud Web App",
+            title="MultiCloud Web App",
             border_style="cyan",
         )
     )

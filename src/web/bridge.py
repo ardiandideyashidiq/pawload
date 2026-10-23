@@ -309,7 +309,7 @@ class WebBridge:
                 tg_client = TelegramClient()
                 if tg_client.is_configured:
                     reporter = TelegramProgressReporter(
-                        title=f"📥 Download: {dest_file.name}",
+                        title=f"[download] {dest_file.name}",
                         client=tg_client,
                         target_name=dest_file.name,
                     )
@@ -512,7 +512,7 @@ class WebBridge:
                 tg_client = TelegramClient()
                 if tg_client.is_configured:
                     reporter = TelegramProgressReporter(
-                        title=f"📤 Upload: {file_path.name}",
+                        title=f"[upload] {file_path.name}",
                         client=tg_client,
                         target_name=file_path.name,
                     )

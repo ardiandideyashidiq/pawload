@@ -201,7 +201,7 @@ def prompt_select_file(
         )
         if is_latest:
             default_idx = idx
-        note = "[bold green]★ Latest Release[/bold green]" if is_latest else ""
+        note = "[bold green][latest][/bold green]" if is_latest else ""
         size_str = format_size(item.size)
         mtime_str = (
             item.modified_time.strftime("%Y-%m-%d %H:%M:%S")

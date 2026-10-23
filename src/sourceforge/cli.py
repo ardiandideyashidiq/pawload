@@ -115,7 +115,7 @@ def download(
         )
         if reporter:
             reporter.finish(success_url=f"Downloaded {dest.name}")
-        console.print(f"[bold green]✓ Downloaded to:[/bold green] {dest.resolve()}")
+        console.print(f"[bold green][ok] Downloaded to:[/bold green] {dest.resolve()}")
     except KeyboardInterrupt:
         if reporter:
             reporter.finish(error="Cancelled by user")
@@ -182,7 +182,7 @@ def upload(
         )
         if reporter:
             reporter.finish(success_url=str(remote_target))
-        console.print(f"[bold green]✓ Upload complete:[/bold green] {remote_target}")
+        console.print(f"[bold green][ok] Upload complete:[/bold green] {remote_target}")
     except KeyboardInterrupt:
         if reporter:
             reporter.finish(error="Cancelled by user")
@@ -443,7 +443,7 @@ def config_set(
             cfg.default_mirror = mirror
 
         cfg.save()
-        console.print("[bold green]✓ Configuration saved.[/bold green]")
+        console.print("[bold green][ok] Configuration saved.[/bold green]")
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)

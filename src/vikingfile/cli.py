@@ -205,7 +205,7 @@ def delete(
         ok = client.delete(target=target)
         if ok:
             console.print(
-                f"[bold green]✓ File '{target}' deleted successfully.[/bold green]"
+                f"[bold green][ok] File '{target}' deleted successfully.[/bold green]"
             )
         else:
             console.print(
@@ -235,7 +235,7 @@ def rename(
         ok = client.rename(target=target, new_filename=new_name)
         if ok:
             console.print(
-                f"[bold green]✓ Renamed '{target}' to '{new_name}'.[/bold green]"
+                f"[bold green][ok] Renamed '{target}' to '{new_name}'.[/bold green]"
             )
         else:
             console.print(f"[bold red]Failed to rename '{target}'.[/bold red]")
@@ -293,7 +293,7 @@ def download(
         )
         if reporter:
             reporter.finish(success_url=f"Downloaded {dest.name}")
-        console.print(f"[bold green]✓ Downloaded to:[/bold green] {dest.resolve()}")
+        console.print(f"[bold green][ok] Downloaded to:[/bold green] {dest.resolve()}")
     except KeyboardInterrupt:
         if reporter:
             reporter.finish(error="Cancelled by user")
@@ -341,7 +341,7 @@ def config_set(
             cfg.concurrency = concurrency
 
         cfg.save()
-        console.print("[bold green]✓ Configuration saved.[/bold green]")
+        console.print("[bold green][ok] Configuration saved.[/bold green]")
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)

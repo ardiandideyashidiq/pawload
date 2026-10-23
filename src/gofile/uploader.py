@@ -72,7 +72,7 @@ def upload_file(
     guest_token = d.get("guestToken")
     logger.info("GoFile upload complete: {}", download_page)
 
-    con.print(f"[bold green]✓ Upload complete:[/bold green] {download_page}")
+    con.print(f"[bold green][ok] Upload complete:[/bold green] {download_page}")
     return UploadResult(
         download_page=download_page,
         file_id=d.get("fileId", d.get("id", "")),

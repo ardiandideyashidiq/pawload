@@ -319,7 +319,7 @@ async def download_file_async(
                         )
                     logger.info("MD5 verified successfully: {}", computed_md5)
                     con.print(
-                        f"[bold green]✓ MD5 Verified:[/bold green] {computed_md5}"
+                        f"[bold green][ok] MD5 Verified:[/bold green] {computed_md5}"
                     )
                 else:
                     con.print(

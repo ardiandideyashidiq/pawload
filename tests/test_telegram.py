@@ -48,9 +48,9 @@ def test_progress_helpers():
     assert format_time(65) == "01:05"
     assert format_time(3665) == "01:01:05"
 
-    assert render_bar(50, 100, length=10) == "█████░░░░░"
-    assert render_bar(100, 100, length=10) == "██████████"
-    assert render_bar(0, 100, length=10) == "░░░░░░░░░░"
+    assert render_bar(50, 100, length=10) == "=====-----"
+    assert render_bar(100, 100, length=10) == "=========="
+    assert render_bar(0, 100, length=10) == "----------"
 
 
 def test_telegram_client_mock():

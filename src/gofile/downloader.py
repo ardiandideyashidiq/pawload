@@ -303,7 +303,7 @@ async def download_file_async(
                     raise ValueError(
                         f"Checksum mismatch for {dest.name}! Expected {expected_md5}, got {computed_md5}"
                     )
-                con.print(f"[bold green]✓ MD5 Verified:[/bold green] {computed_md5}")
+                con.print(f"[bold green][ok] MD5 Verified:[/bold green] {computed_md5}")
         except KeyboardInterrupt:
             con.print("\n[yellow]Checksum verification interrupted.[/yellow]")
             raise KeyboardInterrupt

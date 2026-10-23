@@ -68,5 +68,5 @@ def upload_file(
         hash=res_data["hash"],
         url=res_data.get("url") or f"https://vikingfile.com/f/{res_data['hash']}",
     )
-    con.print(f"[bold green]✓ Upload complete:[/bold green] {result.url}")
+    con.print(f"[bold green][ok] Upload complete:[/bold green] {result.url}")
     return result

@@ -33,10 +33,10 @@ def format_time(seconds: float) -> str:
 
 def render_bar(completed: int, total: int, length: int = 12) -> str:
     if total <= 0:
-        return "░" * length
+        return "-" * length
     fraction = min(1.0, max(0.0, completed / total))
     filled = int(fraction * length)
-    return "█" * filled + "░" * (length - filled)
+    return "=" * filled + "-" * (length - filled)
 
 
 class TelegramProgressReporter:
@@ -82,7 +82,7 @@ class TelegramProgressReporter:
         )
 
         lines = [
-            f"🚀 <b>{self.title}</b>",
+            f"[transfer] <b>{self.title}</b>",
             f"<code>[{bar}] {percent:.1f}%</code>",
             f"<b>Progress:</b> {format_size(self.completed)} / {format_size(self.total)}",
             f"<b>Speed:</b> {format_size(speed)}/s | <b>ETA:</b> {format_time(eta)}",
@@ -152,21 +152,21 @@ class TelegramProgressReporter:
 
         if error:
             lines = [
-                "❌ <b>Transfer Failed</b>",
+                "[error] <b>Transfer Failed</b>",
                 f"<b>Item:</b> {self.title}",
                 f"<b>Error:</b> <code>{error}</code>",
                 f"<b>Elapsed:</b> {format_time(elapsed)}",
             ]
         else:
             lines = [
-                "✅ <b>Transfer Complete!</b>",
+                "[ok] <b>Transfer Complete!</b>",
                 f"<b>Item:</b> {self.title}",
             ]
             if self.total > 0:
                 lines.append(f"<b>Size:</b> {format_size(self.total)}")
             lines.append(f"<b>Elapsed:</b> {format_time(elapsed)}")
             if success_url:
-                lines.append(f"🔗 <b>Link:</b> {success_url}")
+                lines.append(f"<b>Link:</b> {success_url}")
 
             if extra_details:
                 for k, v in extra_details.items():

@@ -55,7 +55,7 @@ def send_cmd(
         client = TelegramClient(chat_id=chat_id, thread_id=thread_id)
         msg = client.send_message(text=text)
         console.print(
-            f"[green]✓ Message sent successfully[/green] (ID: {msg.get('message_id')})"
+            f"[green][ok] Message sent successfully[/green] (ID: {msg.get('message_id')})"
         )
     except Exception as e:
         console.print(f"[red]Error sending message:[/red] {e}")
@@ -74,16 +74,16 @@ def test_cmd(ctx: click.Context, verbose: int) -> None:
         console.print("[cyan]Testing bot authentication (getMe)...[/cyan]")
         bot_info = client.get_me()
         console.print(
-            f"[green]✓ Authenticated as:[/green] @{bot_info.get('username')} ({bot_info.get('first_name')})"
+            f"[green][ok] Authenticated as:[/green] @{bot_info.get('username')} ({bot_info.get('first_name')})"
         )
 
         if client.chat_id:
             console.print(f"[cyan]Sending ping to chat {client.chat_id}...[/cyan]")
             msg = client.send_message(
-                "🔔 <b>Ping:</b> Telegram bot connectivity verified!", parse_mode="HTML"
+                "[ping] <b>Ping:</b> Telegram bot connectivity verified!", parse_mode="HTML"
             )
             console.print(
-                f"[green]✓ Ping sent successfully[/green] (ID: {msg.get('message_id')})"
+                f"[green][ok] Ping sent successfully[/green] (ID: {msg.get('message_id')})"
             )
         else:
             console.print(
@@ -171,7 +171,7 @@ def config_set(
         cfg.throttle_interval = throttle
 
     cfg.save()
-    console.print("[green]✓ Configuration saved.[/green]")
+    console.print("[green][ok] Configuration saved.[/green]")
 
 
 def main() -> None:

@@ -107,10 +107,10 @@ def download(
             )
         if isinstance(dest, list):
             console.print(
-                f"[bold green]✓ Downloaded {len(dest)} files to:[/bold green] {output or target}"
+                f"[bold green][ok] Downloaded {len(dest)} files to:[/bold green] {output or target}"
             )
         else:
-            console.print(f"[bold green]✓ Downloaded to:[/bold green] {dest.resolve()}")
+            console.print(f"[bold green][ok] Downloaded to:[/bold green] {dest.resolve()}")
     except KeyboardInterrupt:
         if reporter:
             reporter.finish(error="Cancelled by user")
@@ -272,7 +272,7 @@ def config_set(
             cfg.concurrency = concurrency
 
         cfg.save()
-        console.print("[bold green]✓ Configuration saved.[/bold green]")
+        console.print("[bold green][ok] Configuration saved.[/bold green]")
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)
