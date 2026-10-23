@@ -58,9 +58,9 @@ def cli(ctx: click.Context, verbose: int) -> None:
 )
 @click.option(
     "-n",
-    "--notify",
-    is_flag=True,
-    help="Stream progress and send completion alert to Telegram.",
+    "--notify/--no-notify",
+    default=None,
+    help="Stream progress and send completion alert to Telegram (default: auto if configured).",
 )
 @click.option(
     "-v",
@@ -85,10 +85,8 @@ def download(
     """Download a file or folder from GoFile with parallel chunks and resume support."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
-    reporter = (
-        create_reporter(title=f"GoFile: {target}", target_name="GoFile")
-        if notify
-        else None
+    reporter = create_reporter(
+        title=f"GoFile: {target}", target_name="GoFile", enabled=notify
     )
     cb = (lambda delta, tot: reporter.advance(delta, tot)) if reporter else None
     try:
@@ -131,9 +129,9 @@ def download(
 @click.option("-t", "--token", help="GoFile account token.")
 @click.option(
     "-n",
-    "--notify",
-    is_flag=True,
-    help="Stream progress and send completion alert to Telegram.",
+    "--notify/--no-notify",
+    default=None,
+    help="Stream progress and send completion alert to Telegram (default: auto if configured).",
 )
 @click.option(
     "-v",
@@ -154,10 +152,8 @@ def upload(
     """Upload a file to GoFile with real-time streaming progress."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
-    reporter = (
-        create_reporter(title=f"GoFile: {file.name}", target_name="GoFile")
-        if notify
-        else None
+    reporter = create_reporter(
+        title=f"GoFile: {file.name}", target_name="GoFile", enabled=notify
     )
     cb = (lambda copied, tot: reporter.update(copied, tot)) if reporter else None
     try:

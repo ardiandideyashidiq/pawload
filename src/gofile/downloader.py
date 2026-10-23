@@ -119,9 +119,14 @@ async def download_file_async(
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> Path:
     con = console or Console()
-    dest = Path(output_path) if output_path else Path(filename)
-    if dest.is_dir():
-        dest = dest / filename
+    if output_path:
+        out_p = Path(output_path)
+        if str(output_path).endswith(("/", "\\")) or out_p.is_dir():
+            dest = out_p / filename
+        else:
+            dest = out_p
+    else:
+        dest = Path(filename)
     dest.parent.mkdir(parents=True, exist_ok=True)
 
     sidecar_path = Path(f"{dest}.gfdownload")

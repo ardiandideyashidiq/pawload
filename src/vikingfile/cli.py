@@ -42,9 +42,9 @@ def cli(ctx: click.Context, verbose: int) -> None:
 )
 @click.option(
     "-n",
-    "--notify",
-    is_flag=True,
-    help="Stream progress and send completion alert to Telegram.",
+    "--notify/--no-notify",
+    default=None,
+    help="Stream progress and send completion alert to Telegram (default: auto if configured).",
 )
 @click.option(
     "-v",
@@ -65,10 +65,8 @@ def upload(
     """Upload a file to VikingFile anonymously or to your user account."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
-    reporter = (
-        create_reporter(title=f"VikingFile: {file.name}", target_name="VikingFile")
-        if notify
-        else None
+    reporter = create_reporter(
+        title=f"VikingFile: {file.name}", target_name="VikingFile", enabled=notify
     )
     try:
         client = VikingFileClient(user=user, console=console)
@@ -258,9 +256,9 @@ def rename(
 )
 @click.option(
     "-n",
-    "--notify",
-    is_flag=True,
-    help="Stream progress and send completion alert to Telegram.",
+    "--notify/--no-notify",
+    default=None,
+    help="Stream progress and send completion alert to Telegram (default: auto if configured).",
 )
 @click.option(
     "-v",
@@ -281,10 +279,8 @@ def download(
     """Download a direct file URL with parallel chunks and resume support."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
-    reporter = (
-        create_reporter(title=f"VikingFile: {target}", target_name="VikingFile")
-        if notify
-        else None
+    reporter = create_reporter(
+        title=f"VikingFile: {target}", target_name="VikingFile", enabled=notify
     )
     cb = (lambda delta, tot: reporter.advance(delta, tot)) if reporter else None
     try:

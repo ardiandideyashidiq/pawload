@@ -198,11 +198,18 @@ def create_reporter(
     target_name: str | None = None,
     chat_id: str | int | None = None,
     thread_id: int | None = None,
+    enabled: bool | None = None,
 ) -> TelegramProgressReporter | None:
-    """Instantiate a TelegramProgressReporter if bot token and chat_id are configured."""
+    """Instantiate a TelegramProgressReporter if bot token and chat_id are configured.
+
+    If enabled is None, defaults to True whenever bot credentials are configured.
+    If enabled is False, notifications are explicitly suppressed.
+    """
+    if enabled is False:
+        return None
     try:
         client = TelegramClient(chat_id=chat_id, thread_id=thread_id)
-        if client.bot_token and client.chat_id:
+        if client.is_configured:
             return TelegramProgressReporter(
                 title=title,
                 client=client,

@@ -40,11 +40,13 @@ def get_expected_md5(project: str, remote_path: str) -> str | None:
         root = ET.fromstring(resp.content)
         namespaces = {"media": "http://video.search.yahoo.com/mrss/"}
         for item in root.findall(".//item"):
-            title = (item.find("title").text or "").strip()
-            if title.endswith(target_name) or title == f"/{clean_path}":
+            title = (item.find("title").text or "").strip().lstrip("/")
+            if title == clean_path:
                 hash_elem = item.find(".//media:hash", namespaces)
                 if hash_elem is not None and hash_elem.text:
-                    return hash_elem.text.strip().lower()
+                    val = hash_elem.text.strip().lower()
+                    if val and val != "none":
+                        return val
     except Exception:
         pass
     return None
@@ -123,9 +125,14 @@ async def download_file_async(
         target.accept_ranges,
     )
 
-    dest = Path(output_path) if output_path else Path(target.filename)
-    if dest.is_dir():
-        dest = dest / target.filename
+    if output_path:
+        out_p = Path(output_path)
+        if str(output_path).endswith(("/", "\\")) or out_p.is_dir():
+            dest = out_p / target.filename
+        else:
+            dest = out_p
+    else:
+        dest = Path(target.filename)
     dest.parent.mkdir(parents=True, exist_ok=True)
 
     sidecar_path = Path(f"{dest}.sfdownload")

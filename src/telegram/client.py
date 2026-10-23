@@ -27,6 +27,11 @@ class TelegramClient:
         self.thread_id = thread_id if thread_id is not None else self.config.thread_id
         self.parse_mode = self.config.parse_mode
 
+
+    @property
+    def is_configured(self) -> bool:
+        """Return True if both bot token and chat ID are present."""
+        return bool(self.bot_token and self.chat_id)
     def _get_url(self, method: str) -> str:
         if not self.bot_token:
             raise ValueError(

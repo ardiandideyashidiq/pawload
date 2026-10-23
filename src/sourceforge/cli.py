@@ -69,9 +69,9 @@ def cli(ctx: click.Context, verbose: int) -> None:
 )
 @click.option(
     "-n",
-    "--notify",
-    is_flag=True,
-    help="Stream progress and send completion alert to Telegram.",
+    "--notify/--no-notify",
+    default=None,
+    help="Stream progress and send completion alert to Telegram (default: auto if configured).",
 )
 @click.option(
     "-v",
@@ -97,10 +97,8 @@ def download(
     """Download a file or project release with parallel chunks, resume support, and checksum verification."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
-    reporter = (
-        create_reporter(title=f"SourceForge: {target}", target_name="SourceForge")
-        if notify
-        else None
+    reporter = create_reporter(
+        title=f"SourceForge: {target}", target_name="SourceForge", enabled=notify
     )
     cb = (lambda delta, tot: reporter.advance(delta, tot)) if reporter else None
     try:
@@ -141,9 +139,9 @@ def download(
 )
 @click.option(
     "-n",
-    "--notify",
-    is_flag=True,
-    help="Stream progress and send completion alert to Telegram.",
+    "--notify/--no-notify",
+    default=None,
+    help="Stream progress and send completion alert to Telegram (default: auto if configured).",
 )
 @click.option(
     "-v",
@@ -167,10 +165,8 @@ def upload(
     """Upload a file via SFTP with automatic directory creation and resume support."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
-    reporter = (
-        create_reporter(title=f"SourceForge: {file.name}", target_name="SourceForge")
-        if notify
-        else None
+    reporter = create_reporter(
+        title=f"SourceForge: {file.name}", target_name="SourceForge", enabled=notify
     )
     cb = (lambda copied, tot: reporter.update(copied, tot)) if reporter else None
     try:

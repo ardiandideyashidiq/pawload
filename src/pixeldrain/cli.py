@@ -52,9 +52,9 @@ def cli(ctx: click.Context, verbose: int) -> None:
 )
 @click.option(
     "-n",
-    "--notify",
-    is_flag=True,
-    help="Stream progress and send completion alert to Telegram.",
+    "--notify/--no-notify",
+    default=None,
+    help="Stream progress and send completion alert to Telegram (default: auto if configured).",
 )
 @click.option(
     "-v",
@@ -77,10 +77,8 @@ def download(
     """Download a file from Pixeldrain with parallel chunks and SHA256 verification."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
-    reporter = (
-        create_reporter(title=f"Pixeldrain: {target}", target_name="Pixeldrain")
-        if notify
-        else None
+    reporter = create_reporter(
+        title=f"Pixeldrain: {target}", target_name="Pixeldrain", enabled=notify
     )
     cb = (lambda delta, tot: reporter.advance(delta, tot)) if reporter else None
     try:
@@ -112,9 +110,9 @@ def download(
 @click.option("-k", "--key", help="Pixeldrain API key.")
 @click.option(
     "-n",
-    "--notify",
-    is_flag=True,
-    help="Stream progress and send completion alert to Telegram.",
+    "--notify/--no-notify",
+    default=None,
+    help="Stream progress and send completion alert to Telegram (default: auto if configured).",
 )
 @click.option(
     "-v",
@@ -134,10 +132,8 @@ def upload(
     """Upload a file to Pixeldrain."""
     lvl = max(ctx.obj.get("verbose", 0) if ctx.obj else 0, verbose)
     setup_logging(lvl)
-    reporter = (
-        create_reporter(title=f"Pixeldrain: {file.name}", target_name="Pixeldrain")
-        if notify
-        else None
+    reporter = create_reporter(
+        title=f"Pixeldrain: {file.name}", target_name="Pixeldrain", enabled=notify
     )
     try:
         client = PixelDrainClient(api_key=key, console=console)

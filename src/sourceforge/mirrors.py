@@ -146,17 +146,27 @@ def parse_target(target: str, project: str | None = None) -> TargetInfo:
     if project:
         if not val or val == project:
             return TargetInfo(project=project, is_project_or_dir=True, remote_dir="")
+        # Strip redundant project prefix if passed as project/path
+        if val.startswith(f"{project}/"):
+            val = val[len(project) + 1:].lstrip("/")
         if is_file_path(val):
             return TargetInfo(project=project, remote_path=val, is_project_or_dir=False)
         return TargetInfo(project=project, is_project_or_dir=True, remote_dir=val)
 
-    if "/" not in val and not is_file_path(val):
+    if "/" in val:
+        # Candidate format: <project>/<path...>
+        parts = val.split("/", 1)
+        proj_cand, sub_cand = parts[0], parts[1].strip("/")
+        if is_file_path(sub_cand):
+            return TargetInfo(project=proj_cand, remote_path=sub_cand, is_project_or_dir=False)
+        return TargetInfo(project=proj_cand, is_project_or_dir=True, remote_dir=sub_cand)
+
+    if not is_file_path(val):
         return TargetInfo(project=val, is_project_or_dir=True, remote_dir="")
 
     raise ValueError(
         f"Cannot determine SourceForge project for '{val}'. Specify -p/--project or pass a SourceForge URL."
     )
-
 
 def prompt_select_file(
     items: list,
