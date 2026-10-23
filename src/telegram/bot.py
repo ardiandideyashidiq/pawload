@@ -55,11 +55,11 @@ async def info_handler(message: types.Message) -> None:
 
     if not provider:
         await message.reply(
-            "[error] Unsupported URL. Supported: SourceForge, GoFile, VikingFile, Pixeldrain."
+            "[ERROR] Unsupported URL. Supported: SourceForge, GoFile, VikingFile, Pixeldrain."
         )
         return
 
-    status_msg = await message.reply(f"[info] Querying {provider.capitalize()} metadata...")
+    status_msg = await message.reply(f"[INFO] Querying {provider.capitalize()} metadata...")
 
     try:
         if provider == "pixeldrain":
@@ -86,7 +86,7 @@ async def info_handler(message: types.Message) -> None:
             info = client.check(url)
             if not info or not info.exist:
                 await status_msg.edit_text(
-                    "[error] VikingFile: File does not exist or was deleted."
+                    "[ERROR] VikingFile: File does not exist or was deleted."
                 )
                 return
             text = (
@@ -127,7 +127,7 @@ async def info_handler(message: types.Message) -> None:
     except Exception as e:
         logger.exception("Info query failed")
         await status_msg.edit_text(
-            f"[error] Error querying {provider}: <code>{e}</code>", parse_mode=ParseMode.HTML
+            f"[ERROR] Error querying {provider}: <code>{e}</code>", parse_mode=ParseMode.HTML
         )
 
 
@@ -139,14 +139,14 @@ async def document_handler(message: types.Message, bot: Bot) -> None:
     # Telegram bot API limits getFile downloads to 20MB
     if doc.file_size and doc.file_size > 20 * 1024 * 1024:
         await message.reply(
-            "[warn] File size exceeds Telegram Bot API's 20 MB download limit for standard bot tokens.",
+            "[WARN] File size exceeds Telegram Bot API's 20 MB download limit for standard bot tokens.",
             parse_mode=ParseMode.HTML,
         )
         return
 
     file_name = doc.file_name or "uploaded_file"
     status_msg = await message.reply(
-        f"[info] Downloading <b>{file_name}</b> from Telegram...", parse_mode=ParseMode.HTML
+        f"[INFO] Downloading <b>{file_name}</b> from Telegram...", parse_mode=ParseMode.HTML
     )
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -155,13 +155,13 @@ async def document_handler(message: types.Message, bot: Bot) -> None:
             file_obj = await bot.get_file(doc.file_id)
             if not file_obj.file_path:
                 await status_msg.edit_text(
-                    "[error] Failed to obtain file path from Telegram."
+                    "[ERROR] Failed to obtain file path from Telegram."
                 )
                 return
 
             await bot.download_file(file_obj.file_path, destination=dest_path)
             await status_msg.edit_text(
-                f"[upload] Uploading <b>{file_name}</b> to GoFile...",
+                f"[UPLOAD] Uploading <b>{file_name}</b> to GoFile...",
                 parse_mode=ParseMode.HTML,
             )
 
@@ -171,7 +171,7 @@ async def document_handler(message: types.Message, bot: Bot) -> None:
             result = gf_client.upload(dest_path)
 
             success_text = (
-                "[ok] <b>Upload Complete!</b>\n\n"
+                "[OK] <b>Upload Complete!</b>\n\n"
                 f"<b>File:</b> {file_name}\n"
                 f"<b>Provider:</b> GoFile\n"
                 f"<b>Download Link:</b> {result.download_page}\n"
@@ -181,7 +181,7 @@ async def document_handler(message: types.Message, bot: Bot) -> None:
         except Exception as e:
             logger.exception("Document handling error")
             await status_msg.edit_text(
-                f"[error] Upload failed: <code>{e}</code>", parse_mode=ParseMode.HTML
+                f"[ERROR] Upload failed: <code>{e}</code>", parse_mode=ParseMode.HTML
             )
 
 

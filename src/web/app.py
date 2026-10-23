@@ -79,9 +79,12 @@ def create_app(bridge: WebBridge | None = None, verbose: int = 0) -> Flask:
         if path.startswith("api/"):
             return jsonify({"error": "Endpoint not found"}), 404
 
-        target = dist_dir / path
-        if path and target.is_file():
-            return send_from_directory(dist_dir, path)
+        try:
+            target = (dist_dir / path).resolve()
+            if path and target.is_file() and dist_dir.resolve() in target.parents:
+                return send_from_directory(dist_dir, path)
+        except Exception:
+            pass
 
         index_file = dist_dir / "index.html"
         if index_file.is_file():
@@ -251,7 +254,7 @@ def create_app(bridge: WebBridge | None = None, verbose: int = 0) -> Flask:
             tg = TelegramClient(bot_token=token, chat_id=chat_id, thread_id=thread_id)
             info = tg.get_me()
             if tg.chat_id:
-                tg.send_message("[ping] <b>Ping:</b> Web GUI Telegram connectivity verified!")
+                tg.send_message("[PING] <b>Ping:</b> Web GUI Telegram connectivity verified!")
             return jsonify({
                 "success": True,
                 "bot_username": info.get("username"),

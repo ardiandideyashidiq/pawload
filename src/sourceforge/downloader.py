@@ -291,6 +291,11 @@ async def download_file_async(
                 state.save(sidecar_path)
             con.print("\n[yellow]Download paused. Progress saved for resume.[/yellow]")
             raise KeyboardInterrupt
+        except Exception:
+            for t in tasks:
+                t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
         finally:
             dest_file.flush()
             dest_file.close()
@@ -319,7 +324,7 @@ async def download_file_async(
                         )
                     logger.info("MD5 verified successfully: {}", computed_md5)
                     con.print(
-                        f"[bold green][ok] MD5 Verified:[/bold green] {computed_md5}"
+                        f"[bold green][OK] MD5 Verified:[/bold green] {computed_md5}"
                     )
                 else:
                     con.print(

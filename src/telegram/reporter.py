@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import html
 import math
 import time
 from typing import Any
 
 from loguru import logger
-
 from telegram.client import TelegramClient
 
 
@@ -82,13 +82,13 @@ class TelegramProgressReporter:
         )
 
         lines = [
-            f"[transfer] <b>{self.title}</b>",
+            f"[TRANSFER] <b>{html.escape(self.title)}</b>",
             f"<code>[{bar}] {percent:.1f}%</code>",
             f"<b>Progress:</b> {format_size(self.completed)} / {format_size(self.total)}",
             f"<b>Speed:</b> {format_size(speed)}/s | <b>ETA:</b> {format_time(eta)}",
         ]
         if self.target_name:
-            lines.append(f"<b>Target:</b> {self.target_name}")
+            lines.append(f"<b>Target:</b> {html.escape(self.target_name)}")
 
         return "\n".join(lines)
 
@@ -122,6 +122,9 @@ class TelegramProgressReporter:
                 )
                 if success:
                     self.last_edit_time = now
+                elif getattr(self.client, "last_retry_after", 0) > 0:
+                    self.last_edit_time = now + self.client.last_retry_after
+                    self.client.last_retry_after = 0.0
         except Exception as e:
             logger.debug(f"Telegram progress reporter send/edit failed: {e}")
 
@@ -152,15 +155,15 @@ class TelegramProgressReporter:
 
         if error:
             lines = [
-                "[error] <b>Transfer Failed</b>",
-                f"<b>Item:</b> {self.title}",
-                f"<b>Error:</b> <code>{error}</code>",
+                "[ERROR] <b>Transfer Failed</b>",
+                f"<b>Item:</b> {html.escape(self.title)}",
+                f"<b>Error:</b> <code>{html.escape(str(error))}</code>",
                 f"<b>Elapsed:</b> {format_time(elapsed)}",
             ]
         else:
             lines = [
-                "[ok] <b>Transfer Complete!</b>",
-                f"<b>Item:</b> {self.title}",
+                "[OK] <b>Transfer Complete!</b>",
+                f"<b>Item:</b> {html.escape(self.title)}",
             ]
             if self.total > 0:
                 lines.append(f"<b>Size:</b> {format_size(self.total)}")

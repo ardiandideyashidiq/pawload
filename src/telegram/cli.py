@@ -55,10 +55,10 @@ def send_cmd(
         client = TelegramClient(chat_id=chat_id, thread_id=thread_id)
         msg = client.send_message(text=text)
         console.print(
-            f"[green][ok] Message sent successfully[/green] (ID: {msg.get('message_id')})"
+            f"[green][OK] Message sent successfully[/green] (ID: {msg.get('message_id')})"
         )
     except Exception as e:
-        console.print(f"[red]Error sending message:[/red] {e}")
+        console.print(f"[bold red][ERROR] Send:[/bold red] {e}")
         sys.exit(1)
 
 
@@ -74,23 +74,23 @@ def test_cmd(ctx: click.Context, verbose: int) -> None:
         console.print("[cyan]Testing bot authentication (getMe)...[/cyan]")
         bot_info = client.get_me()
         console.print(
-            f"[green][ok] Authenticated as:[/green] @{bot_info.get('username')} ({bot_info.get('first_name')})"
+            f"[green][OK] Authenticated as:[/green] @{bot_info.get('username')} ({bot_info.get('first_name')})"
         )
 
         if client.chat_id:
             console.print(f"[cyan]Sending ping to chat {client.chat_id}...[/cyan]")
             msg = client.send_message(
-                "[ping] <b>Ping:</b> Telegram bot connectivity verified!", parse_mode="HTML"
+                "[PING] <b>Ping:</b> Telegram bot connectivity verified!", parse_mode="HTML"
             )
             console.print(
-                f"[green][ok] Ping sent successfully[/green] (ID: {msg.get('message_id')})"
+                f"[green][OK] Ping sent successfully[/green] (ID: {msg.get('message_id')})"
             )
         else:
             console.print(
                 "[yellow]Notice: No chat_id configured. To test sending messages, configure TELEGRAM_CHAT_ID.[/yellow]"
             )
     except Exception as e:
-        console.print(f"[red]Test failed:[/red] {e}")
+        console.print(f"[bold red][ERROR] Test:[/bold red] {e}")
         sys.exit(1)
 
 
@@ -110,7 +110,7 @@ def bot_cmd(ctx: click.Context, token: str | None, verbose: int) -> None:
         console.print("\n[yellow]Bot daemon stopped by user.[/yellow]")
         sys.exit(130)
     except Exception as e:
-        console.print(f"[red]Bot error:[/red] {e}")
+        console.print(f"[bold red][ERROR] Bot:[/bold red] {e}")
         sys.exit(1)
 
 
@@ -171,7 +171,7 @@ def config_set(
         cfg.throttle_interval = throttle
 
     cfg.save()
-    console.print("[green][ok] Configuration saved.[/green]")
+    console.print("[green][OK] Configuration saved.[/green]")
 
 
 def main() -> None:

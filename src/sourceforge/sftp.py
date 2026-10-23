@@ -138,7 +138,7 @@ async def upload_file_sftp(
             raise KeyboardInterrupt
 
     con.print(
-        f"[bold green][ok] Successfully uploaded:[/bold green] {local_file.name} -> {target_file}"
+        f"[bold green][OK] Successfully uploaded:[/bold green] {local_file.name} -> {target_file}"
     )
     return target_file
 

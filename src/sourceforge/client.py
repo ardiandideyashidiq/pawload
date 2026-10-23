@@ -341,7 +341,7 @@ class SourceForgeClient:
                 sftp=sftp, project=project, remote_path=remote_path
             )
             self.console.print(
-                f"[bold green][ok] Deleted remote path:[/bold green] {remote_path}"
+                f"[bold green][OK] Deleted remote path:[/bold green] {remote_path}"
             )
 
     def delete(self, remote_path: str) -> None:
@@ -362,7 +362,7 @@ class SourceForgeClient:
                 new_remote_path=new_remote_path,
             )
             self.console.print(
-                f"[bold green][ok] Renamed:[/bold green] {old_remote_path} -> {new_remote_path}"
+                f"[bold green][OK] Renamed:[/bold green] {old_remote_path} -> {new_remote_path}"
             )
 
     def rename(self, old_remote_path: str, new_remote_path: str) -> None:

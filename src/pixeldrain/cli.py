@@ -92,7 +92,7 @@ def download(
         )
         if reporter:
             reporter.finish(success_url=f"Downloaded {dest.name}")
-        console.print(f"[bold green][ok] Downloaded to:[/bold green] {dest.resolve()}")
+        console.print(f"[bold green][OK] Downloaded to:[/bold green] {dest.resolve()}")
     except KeyboardInterrupt:
         if reporter:
             reporter.finish(error="Cancelled by user")
@@ -101,7 +101,7 @@ def download(
     except Exception as e:
         if reporter:
             reporter.finish(error=str(e))
-        console.print(f"[bold red]Download Error:[/bold red] {e}")
+        console.print(f"[bold red][ERROR] Download:[/bold red] {e}")
         sys.exit(1)
 
 
@@ -152,7 +152,7 @@ def upload(
     except Exception as e:
         if reporter:
             reporter.finish(error=str(e))
-        console.print(f"[bold red]Upload Error:[/bold red] {e}")
+        console.print(f"[bold red][ERROR] Upload:[/bold red] {e}")
         sys.exit(1)
 
 
@@ -203,7 +203,7 @@ def info(
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)
     except Exception as e:
-        console.print(f"[bold red]Info Error:[/bold red] {e}")
+        console.print(f"[bold red][ERROR] Info:[/bold red] {e}")
         sys.exit(1)
 
 
@@ -251,7 +251,7 @@ def list_cmd(
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)
     except Exception as e:
-        console.print(f"[bold red]List Error:[/bold red] {e}")
+        console.print(f"[bold red][ERROR] List:[/bold red] {e}")
         sys.exit(1)
 
 
@@ -279,7 +279,7 @@ def delete(
         ok = client.delete(target=target)
         if ok:
             console.print(
-                f"[bold green][ok] File '{target}' deleted successfully.[/bold green]"
+                f"[bold green][OK] File '{target}' deleted successfully.[/bold green]"
             )
         else:
             console.print(f"[bold red]Failed to delete '{target}'.[/bold red]")
@@ -288,7 +288,7 @@ def delete(
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)
     except Exception as e:
-        console.print(f"[bold red]Delete Error:[/bold red] {e}")
+        console.print(f"[bold red][ERROR] Delete:[/bold red] {e}")
         sys.exit(1)
 
 
@@ -327,7 +327,7 @@ def config_set(
             cfg.concurrency = concurrency
 
         cfg.save()
-        console.print("[bold green][ok] Configuration saved.[/bold green]")
+        console.print("[bold green][OK] Configuration saved.[/bold green]")
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         sys.exit(130)

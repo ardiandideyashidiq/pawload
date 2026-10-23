@@ -54,7 +54,7 @@ def run_interactive_setup(console: Console) -> None:
         conc_val = Prompt.ask("Default download concurrency", default=default_conc)
         try:
             sf_cfg.save_section("global", {"concurrency": int(conc_val)}, config_file=sf_cfg.CONFIG_FILE)
-            console.print("[green][ok] Saved [global][/green]\n")
+            console.print("[green][OK] Saved [global][/green]\n")
         except ValueError:
             console.print("[yellow]Invalid integer, skipping global concurrency.[/yellow]\n")
 
@@ -70,7 +70,7 @@ def run_interactive_setup(console: Console) -> None:
         sf_c.key_path = key.strip() or None
         sf_c.default_mirror = mirror.strip() or None
         sf_c.save()
-        console.print("[green][ok] Saved [sourceforge][/green]\n")
+        console.print("[green][OK] Saved [sourceforge][/green]\n")
 
     # 3. GoFile
     if Confirm.ask("[bold]Configure GoFile?[/bold]", default=True):
@@ -78,7 +78,7 @@ def run_interactive_setup(console: Console) -> None:
         token = Prompt.ask("GoFile account token (leave blank for guest)", default=gf_c.token or "")
         gf_c.token = token.strip() or None
         gf_c.save()
-        console.print("[green][ok] Saved [gofile][/green]\n")
+        console.print("[green][OK] Saved [gofile][/green]\n")
 
     # 4. Pixeldrain
     if Confirm.ask("[bold]Configure Pixeldrain?[/bold]", default=True):
@@ -86,7 +86,7 @@ def run_interactive_setup(console: Console) -> None:
         api_key = Prompt.ask("Pixeldrain API key (leave blank for anonymous)", default=pd_c.api_key or "")
         pd_c.api_key = api_key.strip() or None
         pd_c.save()
-        console.print("[green][ok] Saved [pixeldrain][/green]\n")
+        console.print("[green][OK] Saved [pixeldrain][/green]\n")
 
     # 5. VikingFile
     if Confirm.ask("[bold]Configure VikingFile?[/bold]", default=True):
@@ -94,7 +94,7 @@ def run_interactive_setup(console: Console) -> None:
         user_hash = Prompt.ask("VikingFile user account hash (leave blank for anonymous)", default=vf_c.user or "")
         vf_c.user = user_hash.strip()
         vf_c.save()
-        console.print("[green][ok] Saved [vikingfile][/green]\n")
+        console.print("[green][OK] Saved [vikingfile][/green]\n")
 
     # 6. Telegram Notifications
     if Confirm.ask("[bold]Configure Telegram Bot & Notifications?[/bold]", default=False):
@@ -107,7 +107,7 @@ def run_interactive_setup(console: Console) -> None:
         if thread_id_val.strip().isdigit():
             tg_c.thread_id = int(thread_id_val.strip())
         tg_c.save()
-        console.print("[green][ok] Saved [telegram][/green]\n")
+        console.print("[green][OK] Saved [telegram][/green]\n")
 
     console.print("[bold green]All configuration saved successfully![/bold green]")
     console.print("Inspect settings anytime using: [cyan]pawload config show[/cyan]\n")

@@ -50,8 +50,16 @@ class AsyncLoopThread:
         self.loop.run_forever()
 
     def submit(self, coro: Any) -> asyncio.Future:
-        return asyncio.run_coroutine_threadsafe(coro, self.loop)
+        fut = asyncio.run_coroutine_threadsafe(coro, self.loop)
 
+        def _log_err(f: Any) -> None:
+            if not f.cancelled():
+                exc = f.exception()
+                if exc:
+                    logger.error(f"Background task exception: {exc}")
+
+        fut.add_done_callback(_log_err)
+        return fut
 
 class WebBridge:
     """Backend business bridge managing transfers, config, and live SSE subscribers."""
@@ -279,16 +287,12 @@ class WebBridge:
 
         with self._lock:
             self._transfers[transfer_id] = transfer_record
+            coro = self._run_download_task(
+                transfer_id, target, provider, dest_file, concurrency, mirror, notify
+            )
+            self._futures[transfer_id] = self._worker.submit(coro)
 
         self.dispatch_event("transfer_added", transfer_record)
-
-        coro = self._run_download_task(
-            transfer_id, target, provider, dest_file, concurrency, mirror, notify
-        )
-        future = self._worker.submit(coro)
-        with self._lock:
-            self._futures[transfer_id] = future
-
         return transfer_id
 
     async def _run_download_task(
@@ -303,14 +307,14 @@ class WebBridge:
     ) -> None:
         last_time = time.time()
         last_bytes = 0
+        cumulative_completed = 0
         reporter: TelegramProgressReporter | None = None
-
         if notify:
             try:
                 tg_client = TelegramClient()
                 if tg_client.is_configured:
                     reporter = TelegramProgressReporter(
-                        title=f"[download] {dest_file.name}",
+                        title=f"[DOWNLOAD] {dest_file.name}",
                         client=tg_client,
                         target_name=dest_file.name,
                     )
@@ -318,27 +322,33 @@ class WebBridge:
                 logger.debug(f"Failed to initialize Telegram reporter: {e}")
 
         def progress_cb(completed: int, total: int) -> None:
-            nonlocal last_time, last_bytes
+            nonlocal last_time, last_bytes, cumulative_completed
+            # Support both incremental delta callbacks (e.g. len(chunk)) and cumulative totals
+            if completed < cumulative_completed and (cumulative_completed + completed) <= total:
+                cumulative_completed += completed
+            else:
+                cumulative_completed = completed
+
             now = time.time()
             elapsed = now - last_time
             speed = 0.0
             if elapsed >= 0.5:
-                delta = completed - last_bytes
+                delta = cumulative_completed - last_bytes
                 speed = max(0.0, delta / elapsed)
                 last_time = now
-                last_bytes = completed
+                last_bytes = cumulative_completed
 
             eta = (
-                (total - completed) / speed
-                if (speed > 0 and total > completed)
+                (total - cumulative_completed) / speed
+                if (speed > 0 and total > cumulative_completed)
                 else 0.0
             )
-            percent = (completed / total * 100.0) if total > 0 else 0.0
+            percent = (cumulative_completed / total * 100.0) if total > 0 else 0.0
 
             with self._lock:
                 rec = self._transfers.get(transfer_id)
                 if rec and rec["status"] == "running":
-                    rec["completed_bytes"] = completed
+                    rec["completed_bytes"] = cumulative_completed
                     rec["total_bytes"] = total
                     rec["speed_bps"] = speed
                     rec["eta_seconds"] = eta
@@ -348,7 +358,7 @@ class WebBridge:
                 "transfer_progress",
                 {
                     "id": transfer_id,
-                    "completed_bytes": completed,
+                    "completed_bytes": cumulative_completed,
                     "total_bytes": total,
                     "speed_bps": speed,
                     "eta_seconds": eta,
@@ -357,8 +367,7 @@ class WebBridge:
             )
 
             if reporter:
-                reporter.update(completed, total)
-
+                reporter.update(cumulative_completed, total)
         try:
             if provider == "sourceforge":
                 sf = SourceForgeClient()
@@ -487,16 +496,12 @@ class WebBridge:
 
         with self._lock:
             self._transfers[transfer_id] = transfer_record
+            coro = self._run_upload_task(
+                transfer_id, file_path, provider, remote_path, notify
+            )
+            self._futures[transfer_id] = self._worker.submit(coro)
 
         self.dispatch_event("transfer_added", transfer_record)
-
-        coro = self._run_upload_task(
-            transfer_id, file_path, provider, remote_path, notify
-        )
-        future = self._worker.submit(coro)
-        with self._lock:
-            self._futures[transfer_id] = future
-
         return transfer_id
 
     async def _run_upload_task(
@@ -513,7 +518,7 @@ class WebBridge:
                 tg_client = TelegramClient()
                 if tg_client.is_configured:
                     reporter = TelegramProgressReporter(
-                        title=f"[upload] {file_path.name}",
+                        title=f"[UPLOAD] {file_path.name}",
                         client=tg_client,
                         target_name=file_path.name,
                     )

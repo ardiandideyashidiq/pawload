@@ -24,13 +24,12 @@ export function useTransfers() {
   useEffect(() => {
     reload()
 
-    let es: EventSource | null = null
-
-    const initSSE = () => {
-      es = new EventSource('/api/events')
-      es.onopen = () => setConnected(true)
-      es.onerror = () => setConnected(false)
-
+    const es = new EventSource('/api/events')
+    es.onopen = () => {
+      setConnected(true)
+      reload()
+    }
+    es.onerror = () => setConnected(false)
       es.addEventListener('init', (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data) as TransferRecord[]
@@ -71,17 +70,8 @@ export function useTransfers() {
       es.addEventListener('transfer_resumed', handleTransferEvent)
       es.addEventListener('transfer_cancelled', handleTransferEvent)
       es.addEventListener('transfer_error', handleTransferEvent)
-    }
-
-    if (document.readyState === 'complete') {
-      initSSE()
-    } else {
-      window.addEventListener('load', initSSE, { once: true })
-    }
-
     return () => {
-      window.removeEventListener('load', initSSE)
-      es?.close()
+      es.close()
     }
   }, [reload])
 

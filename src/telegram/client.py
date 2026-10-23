@@ -26,12 +26,13 @@ class TelegramClient:
         self.chat_id = str(chat_id) if chat_id is not None else self.config.chat_id
         self.thread_id = thread_id if thread_id is not None else self.config.thread_id
         self.parse_mode = self.config.parse_mode
-
+        self.last_retry_after: float = 0.0
 
     @property
     def is_configured(self) -> bool:
         """Return True if both bot token and chat ID are present."""
         return bool(self.bot_token and self.chat_id)
+
     def _get_url(self, method: str) -> str:
         if not self.bot_token:
             raise ValueError(
@@ -97,10 +98,17 @@ class TelegramClient:
         if reply_markup:
             payload["reply_markup"] = json.dumps(reply_markup)
 
-        resp = requests.post(url, json=payload, timeout=20)
-        data = resp.json()
+        try:
+            resp = requests.post(url, json=payload, timeout=20)
+            data = resp.json()
+        except Exception as e:
+            logger.warning(f"Telegram network error: {e}")
+            raise RuntimeError(f"Telegram network error: {e}")
         if not data.get("ok"):
             err = data.get("description", "Unknown error")
+            retry_after = data.get("parameters", {}).get("retry_after")
+            if retry_after:
+                self.last_retry_after = float(retry_after)
             logger.warning(f"Telegram sendMessage failed: {err}")
             raise RuntimeError(f"Telegram API error: {err}")
         return data.get("result", {})
@@ -166,16 +174,22 @@ class TelegramClient:
         if reply_markup:
             payload["reply_markup"] = json.dumps(reply_markup)
 
-        resp = requests.post(url, json=payload, timeout=20)
-        data = resp.json()
+        try:
+            resp = requests.post(url, json=payload, timeout=20)
+            data = resp.json()
+        except Exception as e:
+            logger.debug(f"Telegram editMessage network error: {e}")
+            return False
         if not data.get("ok"):
             err = str(data.get("description", ""))
             if "message is not modified" in err:
                 return True
+            retry_after = data.get("parameters", {}).get("retry_after")
+            if retry_after:
+                self.last_retry_after = float(retry_after)
             logger.debug(f"Telegram editMessage failed: {err}")
             return False
         return True
-
     async def edit_message_async(
         self,
         message_id: int,

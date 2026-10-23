@@ -250,7 +250,7 @@ async def download_file_async(
                         f"Checksum mismatch for {dest.name}! Expected {expected_sha256}, got {computed_hash}"
                     )
                 con.print(
-                    f"[bold green][ok] SHA256 Verified:[/bold green] {computed_hash}"
+                    f"[bold green][OK] SHA256 Verified:[/bold green] {computed_hash}"
                 )
         except KeyboardInterrupt:
             con.print("\n[yellow]Checksum verification interrupted.[/yellow]")
