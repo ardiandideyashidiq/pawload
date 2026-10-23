@@ -268,7 +268,7 @@ def create_app(bridge: WebBridge | None = None, verbose: int = 0) -> Flask:
                 while True:
                     try:
                         event = event_queue.get(timeout=20.0)
-                        event_type = event.get("type", "message")
+                        event_type = event.get("event") or event.get("type", "message")
                         event_data = event.get("data", event)
                         yield f"event: {event_type}\ndata: {json.dumps(event_data)}\n\n"
                     except queue.Empty:

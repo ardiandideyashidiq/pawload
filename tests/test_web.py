@@ -174,6 +174,22 @@ def test_flask_sse_events() -> None:
     assert resp.status_code == 200
     assert resp.headers["Content-Type"].startswith("text/event-stream")
 
+    gen = resp.response
+    line1 = next(gen)
+    assert b": connected" in line1
+    line2 = next(gen)
+    assert b"event: init" in line2
+
+    # Test dispatching a transfer event
+    bridge.dispatch_event("transfer_added", {"id": "test_1", "type": "upload", "status": "running"})
+    line3 = next(gen)
+    assert b"event: transfer_added" in line3
+    assert b'"id": "test_1"' in line3
+
+    bridge.dispatch_event("transfer_completed", {"id": "test_1", "type": "upload", "status": "completed"})
+    line4 = next(gen)
+    assert b"event: transfer_completed" in line4
+    assert b'"status": "completed"' in line4
 
 def test_cli_help() -> None:
     runner = CliRunner()

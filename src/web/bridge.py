@@ -75,7 +75,7 @@ class WebBridge:
 
     def dispatch_event(self, event_type: str, data: dict[str, Any]) -> None:
         """Broadcast an event payload to all SSE subscribers."""
-        payload = {"type": event_type, **data}
+        payload = {"event": event_type, "data": data}
         with self._lock:
             subs = list(self._subscribers)
         for sub in subs:
