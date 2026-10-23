@@ -312,10 +312,8 @@ if reporter:
 ## Configuration & Inheritance
 
 `pawload` resolves active configuration with the following precedence:
-1. `PAWLOAD_CONFIG` environment variable
-2. `~/.config/pawload/config.toml`
-3. `~/.config/scraper/config.toml` (legacy)
-4. `~/.config/sourceforge/config.toml` (legacy)
+1. `PAWLOAD_CONFIG` environment variable (or `CONFIG_FILE`)
+2. `~/.config/pawload/config.toml` (via `$XDG_CONFIG_HOME`)
 
 ### Sample `config.toml`:
 ```toml
