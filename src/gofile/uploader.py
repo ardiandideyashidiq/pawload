@@ -1,14 +1,24 @@
 from __future__ import annotations
 
 import asyncio
+import io
+import json
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from curl_cffi import requests
-from curl_cffi.curl import CurlMime
+from curl_cffi.curl import Curl, CurlInfo, CurlOpt
 from loguru import logger
 from rich.console import Console
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    TextColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
 
 from gofile.api import UPLOAD_URL
 
@@ -36,30 +46,92 @@ def upload_file(
 
     total_size = path.stat().st_size
     logger.info("Starting GoFile upload: {} ({} bytes)", path.name, total_size)
-    mp = CurlMime()
-    if token:
-        mp.addpart(name="token", data=token.encode())
-    if folder_id:
-        mp.addpart(name="folderId", data=folder_id.encode())
-    mp.addpart(name="file", filename=path.name, local_path=str(path))
+    boundary = f"----PawloadBoundary{uuid.uuid4().hex}"
 
-    with con.status(f"[cyan]Uploading {path.name} ({total_size} bytes)...[/cyan]"):
-        try:
-            resp = requests.post(
-                UPLOAD_URL,
-                multipart=mp,
-                timeout=300,
+    parts_bytes = bytearray()
+    if token:
+        parts_bytes.extend(
+            f'--{boundary}\r\nContent-Disposition: form-data; name="token"\r\n\r\n{token}\r\n'.encode(
+                "utf-8"
             )
+        )
+    if folder_id:
+        parts_bytes.extend(
+            f'--{boundary}\r\nContent-Disposition: form-data; name="folderId"\r\n\r\n{folder_id}\r\n'.encode(
+                "utf-8"
+            )
+        )
+
+    file_header = (
+        f'--{boundary}\r\n'
+        f'Content-Disposition: form-data; name="file"; filename="{path.name}"\r\n'
+        f"Content-Type: application/octet-stream\r\n\r\n"
+    ).encode("utf-8")
+    parts_bytes.extend(file_header)
+    footer = f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+    content_length = len(parts_bytes) + total_size + len(footer)
+
+    header_io = io.BytesIO(bytes(parts_bytes))
+    file_io = open(path, "rb")
+    footer_io = io.BytesIO(footer)
+    bytes_sent = 0
+
+    with Progress(
+        TextColumn("[bold green]Uploading", justify="right"),
+        BarColumn(),
+        DownloadColumn(),
+        TransferSpeedColumn(),
+        TimeRemainingColumn(),
+        console=con,
+        transient=False,
+    ) as progress_bar:
+        task_id = progress_bar.add_task("upload", total=total_size)
+
+        def read_stream(size: int) -> bytes:
+            nonlocal bytes_sent
+            h = header_io.read(size)
+            if h:
+                return h
+            chunk = file_io.read(size)
+            if chunk:
+                bytes_sent += len(chunk)
+                progress_bar.update(task_id, completed=bytes_sent)
+                if progress_callback:
+                    progress_callback(bytes_sent, total_size)
+                return chunk
+            return footer_io.read(size)
+
+        resp_chunks: list[bytes] = []
+        c = Curl()
+        c.setopt(CurlOpt.URL, UPLOAD_URL.encode("utf-8"))
+        c.setopt(CurlOpt.POST, True)
+        c.setopt(CurlOpt.POSTFIELDSIZE_LARGE, content_length)
+        c.setopt(
+            CurlOpt.HTTPHEADER,
+            [f"Content-Type: multipart/form-data; boundary={boundary}".encode("utf-8")],
+        )
+        c.setopt(CurlOpt.READFUNCTION, read_stream)
+        c.setopt(
+            CurlOpt.WRITEFUNCTION, lambda d: resp_chunks.append(d) or len(d)
+        )
+        c.setopt(CurlOpt.TIMEOUT, 600)
+
+        try:
+            c.perform()
+            status_code = c.getinfo(CurlInfo.RESPONSE_CODE)
         except (KeyboardInterrupt, asyncio.CancelledError):
             con.print("\n[yellow]Upload cancelled by user.[/yellow]")
             raise KeyboardInterrupt
         finally:
-            mp.close()
+            c.close()
+            file_io.close()
 
-    if resp.status_code != 200:
-        raise RuntimeError(f"GoFile upload failed: HTTP {resp.status_code}")
+    if status_code != 200:
+        raise RuntimeError(f"GoFile upload failed: HTTP {status_code}")
 
-    res_data = resp.json()
+    raw_body = b"".join(resp_chunks).decode("utf-8", errors="ignore")
+    res_data = json.loads(raw_body) if raw_body else {}
     if res_data.get("status") != "ok":
         msg = res_data.get("status") or "upload error"
         raise RuntimeError(f"GoFile upload error: {msg}")
