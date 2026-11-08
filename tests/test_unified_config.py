@@ -114,3 +114,28 @@ api_key = "test-key"
     assert "pixeldrain" in res.output
     assert "sample-proj" in res.output
     assert "test-key" in res.output
+
+
+def test_normalize_and_get_global_proxy(tmp_path, monkeypatch):
+    from sourceforge.config import get_global_proxy, normalize_proxy
+
+    assert normalize_proxy("127.0.0.1:1080") == "http://127.0.0.1:1080"
+    assert normalize_proxy("socks5h://127.0.0.1:1080") == "socks5h://127.0.0.1:1080"
+    assert normalize_proxy("") is None
+    assert normalize_proxy(None) is None
+
+    cfg_file = tmp_path / "proxy_test.toml"
+    cfg_file.write_text("[global]\nproxy = 'socks5h://127.0.0.1:1080'\n")
+
+    # Clean env for test
+    monkeypatch.delenv("PAWLOAD_PROXY", raising=False)
+    monkeypatch.delenv("ALL_PROXY", raising=False)
+    monkeypatch.delenv("HTTPS_PROXY", raising=False)
+
+    # 1. From config
+    p = get_global_proxy(config_file=cfg_file)
+    assert p == "socks5h://127.0.0.1:1080"
+
+    # 2. Explicit flag overrides config
+    p_override = get_global_proxy(explicit_proxy="http://10.0.0.1:8080", config_file=cfg_file)
+    assert p_override == "http://10.0.0.1:8080"

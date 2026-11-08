@@ -176,6 +176,7 @@ def extract_filename_from_cd(cd: str) -> str | None:
 async def resolve_direct_download(
     file_id: str,
     cookies: dict[str, str] | None = None,
+    proxy: str | None = None,
     session: AsyncSession | None = None,
 ) -> tuple[str, str, int]:
     """
@@ -185,8 +186,7 @@ async def resolve_direct_download(
     """
     url = f"https://drive.google.com/uc?id={file_id}&export=download"
     owns_session = session is None
-    s = session or AsyncSession(cookies=cookies)
-
+    s = session or AsyncSession(cookies=cookies, proxy=proxy)
     try:
         current_url = url
         final_url = url
@@ -292,12 +292,13 @@ async def resolve_direct_download(
 async def inspect_target_async(
     target: str,
     cookies: dict[str, str] | None = None,
+    proxy: str | None = None,
 ) -> GDriveItem:
     """Inspect a Google Drive target URL or ID, determining if it is a folder or file."""
     clean_id = extract_gdrive_id(target)
     c = cookies if cookies is not None else load_cookies()
 
-    async with AsyncSession(cookies=c) as session:
+    async with AsyncSession(cookies=c, proxy=proxy) as session:
         # Check folder page first
         folder_url = f"https://drive.google.com/drive/folders/{clean_id}"
         resp = await session.get(folder_url, allow_redirects=True)
@@ -379,7 +380,7 @@ async def inspect_target_async(
 
         # Single file target: resolve direct download URL and metadata
         direct_url, filename, total_size = await resolve_direct_download(
-            clean_id, cookies=c, session=session
+            clean_id, cookies=c, proxy=proxy, session=session
         )
         return GDriveItem(
             id=clean_id,
@@ -393,17 +394,19 @@ async def inspect_target_async(
 def inspect_target(
     target: str,
     cookies: dict[str, str] | None = None,
+    proxy: str | None = None,
 ) -> GDriveItem:
     """Synchronous target inspection."""
     import asyncio
 
-    return asyncio.run(inspect_target_async(target=target, cookies=cookies))
+    return asyncio.run(inspect_target_async(target=target, cookies=cookies, proxy=proxy))
 
 
 def list_folder(
     folder_id: str,
     cookies: dict[str, str] | None = None,
+    proxy: str | None = None,
 ) -> list[GDriveItem]:
     """List files inside a Google Drive folder."""
-    item = inspect_target(folder_id, cookies=cookies)
+    item = inspect_target(folder_id, cookies=cookies, proxy=proxy)
     return item.children if item.is_folder else [item]

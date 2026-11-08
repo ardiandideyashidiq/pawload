@@ -235,6 +235,45 @@ def format_size(bytes_val: int) -> str:
         val /= 1024.0
     return f"{val:.1f} PB"
 
+def normalize_proxy(proxy_str: str | None) -> str | None:
+    """Normalize proxy URL, defaulting to http:// if no protocol scheme provided."""
+    if not proxy_str:
+        return None
+    clean = proxy_str.strip()
+    if not clean:
+        return None
+    if "://" not in clean:
+        clean = f"http://{clean}"
+    return clean
+
+
+def get_global_proxy(
+    explicit_proxy: str | None = None,
+    config_file: Path | None = None,
+) -> str | None:
+    """Resolve effective proxy from CLI option, env var, or [global] config.toml section."""
+    resolved: str | None = None
+    if explicit_proxy and explicit_proxy.strip():
+        resolved = normalize_proxy(explicit_proxy)
+    elif os.environ.get("PAWLOAD_PROXY") and os.environ["PAWLOAD_PROXY"].strip():
+        resolved = normalize_proxy(os.environ["PAWLOAD_PROXY"])
+    else:
+        global_sec = load_section("global", config_file=config_file or CONFIG_FILE)
+        conf_proxy = global_sec.get("proxy")
+        if conf_proxy and str(conf_proxy).strip():
+            resolved = normalize_proxy(str(conf_proxy))
+        else:
+            standard_env = os.environ.get("ALL_PROXY") or os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+            if standard_env and standard_env.strip():
+                resolved = normalize_proxy(standard_env)
+
+    if resolved:
+        os.environ["PAWLOAD_PROXY"] = resolved
+        os.environ.setdefault("ALL_PROXY", resolved)
+        os.environ.setdefault("HTTPS_PROXY", resolved)
+        os.environ.setdefault("HTTP_PROXY", resolved)
+
+    return resolved
 
 def setup_logging(verbose: int = 0) -> None:
     import sys

@@ -17,6 +17,7 @@ from gofile.api import (
 from gofile.config import Config
 from gofile.downloader import download_file_async, prompt_select_file
 from gofile.uploader import UploadResult, upload_file
+from sourceforge.config import get_global_proxy
 
 
 def _run_sync(coro):
@@ -42,12 +43,14 @@ class GoFileClient:
         token: str | None = None,
         concurrency: int | None = None,
         chunk_size: int | None = None,
+        proxy: str | None = None,
         console: Console | None = None,
     ) -> None:
         cfg = Config.load()
         self.token = token or cfg.token
         self.concurrency = concurrency if concurrency is not None else cfg.concurrency
         self.chunk_size = chunk_size if chunk_size is not None else cfg.chunk_size
+        self.proxy = get_global_proxy(proxy)
         self.console = console or Console()
 
     def ensure_token(self) -> str:
@@ -168,6 +171,7 @@ class GoFileClient:
             chunk_size=self.chunk_size,
             verify_checksum=verify_checksum,
             console=self.console,
+            proxy=self.proxy,
             progress_callback=progress_callback,
         )
 

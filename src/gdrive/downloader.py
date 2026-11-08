@@ -24,6 +24,7 @@ from gdrive.api import (
     resolve_direct_download,
 )
 from gdrive.config import Config
+from sourceforge.config import get_global_proxy
 
 
 @dataclass
@@ -70,6 +71,7 @@ async def download_file_async(
     target: str,
     output_path: str | Path | None = None,
     cookies: dict[str, str] | str | Path | None = None,
+    proxy: str | None = None,
     concurrency: int | None = None,
     chunk_size: int | None = None,
     console: Console | None = None,
@@ -83,11 +85,12 @@ async def download_file_async(
     num_workers = concurrency or cfg.concurrency or 4
     c_size = chunk_size or cfg.chunk_size or 8 * 1024 * 1024
     c = load_cookies(cookies)
+    eff_proxy = get_global_proxy(proxy)
 
     clean_id = extract_gdrive_id(target)
 
     # 1. Inspect target to see if it's a folder or single file
-    info = await inspect_target_async(target, cookies=c)
+    info = await inspect_target_async(target, cookies=c, proxy=eff_proxy)
     if info.is_folder:
         if not info.children:
             raise RuntimeError(f"Google Drive folder '{info.name}' ({info.id}) contains no files.")
@@ -99,7 +102,7 @@ async def download_file_async(
         clean_id = file_item.id
 
     # 2. Resolve direct URL, filename, and file size
-    direct_url, filename, total_bytes = await resolve_direct_download(clean_id, cookies=c)
+    direct_url, filename, total_bytes = await resolve_direct_download(clean_id, cookies=c, proxy=eff_proxy)
 
     if output_path:
         out_p = Path(output_path)
@@ -117,7 +120,7 @@ async def download_file_async(
     if total_bytes <= 0:
         con.print("[yellow]Single-stream download (size unknown)...[/yellow]")
         try:
-            async with AsyncSession(cookies=c) as session:
+            async with AsyncSession(cookies=c, proxy=eff_proxy) as session:
                 resp = await session.get(direct_url, stream=True)
                 with open(dest, "wb") as f:
                     async for chunk in resp.aiter_content():
@@ -190,7 +193,7 @@ async def download_file_async(
 
         async def worker(worker_id: int) -> None:
             w_task = worker_tasks[worker_id]
-            async with AsyncSession(cookies=c) as session:
+            async with AsyncSession(cookies=c, proxy=eff_proxy) as session:
                 while True:
                     try:
                         chunk_idx, start, end = queue.get_nowait()

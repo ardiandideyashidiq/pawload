@@ -10,7 +10,7 @@ from pathlib import Path
 from curl_cffi import requests
 from rich.console import Console
 
-from sourceforge.config import Config
+from sourceforge.config import Config, get_global_proxy
 from sourceforge.downloader import download_file_async
 from sourceforge.mirrors import (
     get_best_release,
@@ -117,6 +117,7 @@ class SourceForgeClient:
         default_mirror: str | None = None,
         concurrency: int | None = None,
         chunk_size: int | None = None,
+        proxy: str | None = None,
         console: Console | None = None,
     ) -> None:
         cfg = Config.load()
@@ -127,6 +128,7 @@ class SourceForgeClient:
         self.default_mirror = default_mirror or cfg.default_mirror
         self.concurrency = concurrency if concurrency is not None else cfg.concurrency
         self.chunk_size = chunk_size if chunk_size is not None else cfg.chunk_size
+        self.proxy = get_global_proxy(proxy)
         self.console = console or Console()
 
     def _require_project(self) -> str:
@@ -212,6 +214,7 @@ class SourceForgeClient:
             expected_md5=file_md5,
             interactive_prompt=interactive_prompt,
             console=self.console,
+            proxy=self.proxy,
             progress_callback=progress_callback,
         )
 

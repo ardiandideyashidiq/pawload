@@ -133,6 +133,12 @@ def test_unified_download_dispatch(tmp_path: Path):
         res = download("gd:12asPt3gTnvJNdiusf225ey_rOhuHskhE", output_path=out_file)
         assert res == out_file
         mock_gd.assert_called_once()
+    # Test proxy passed into download
+    with patch("gdrive.client.GDriveClient.download_async", new_callable=AsyncMock) as mock_gd_p:
+        mock_gd_p.return_value = out_file
+        res = download("gd:12asPt3gTnvJNdiusf225ey_rOhuHskhE", output_path=out_file, proxy="socks5h://127.0.0.1:1080")
+        assert res == out_file
+        mock_gd_p.assert_called_once()
 
 def test_unified_async_download(tmp_path: Path):
     import asyncio

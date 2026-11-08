@@ -18,6 +18,7 @@ from gdrive.api import (
 )
 from gdrive.config import Config
 from gdrive.downloader import download_file_async
+from sourceforge.config import get_global_proxy
 
 
 def _run_sync(coro: Any) -> Any:
@@ -42,6 +43,7 @@ class GDriveClient:
         self,
         cookie_file: str | Path | None = None,
         cookies: dict[str, str] | str | Path | None = None,
+        proxy: str | None = None,
         concurrency: int | None = None,
         console: Console | None = None,
     ) -> None:
@@ -49,20 +51,21 @@ class GDriveClient:
         cookie_src = cookies if cookies is not None else cookie_file
         self.cookie_file = str(cookie_src) if cookie_src and not isinstance(cookie_src, dict) else cfg.cookie_file
         self.cookies = load_cookies(cookie_src) if cookie_src is not None else load_cookies(self.cookie_file)
+        self.proxy = get_global_proxy(proxy)
         self.concurrency = concurrency or cfg.concurrency or 4
         self.console = console or Console()
 
     def info(self, target: str) -> GDriveItem:
         """Inspect target URL or ID to get metadata (filename, size, folder status, children)."""
-        return inspect_target(target, cookies=self.cookies)
+        return inspect_target(target, cookies=self.cookies, proxy=self.proxy)
 
     async def info_async(self, target: str) -> GDriveItem:
         """Inspect target URL or ID asynchronously."""
-        return await inspect_target_async(target, cookies=self.cookies)
+        return await inspect_target_async(target, cookies=self.cookies, proxy=self.proxy)
 
     def list(self, folder_id: str) -> list[GDriveItem]:
         """List files in a Google Drive folder."""
-        return list_folder(folder_id, cookies=self.cookies)
+        return list_folder(folder_id, cookies=self.cookies, proxy=self.proxy)
 
     async def get_direct_url_async(self, target: str) -> tuple[str, str, int]:
         """Resolve direct download URL, filename, and file size."""
@@ -72,7 +75,7 @@ class GDriveClient:
             if not info.children:
                 raise RuntimeError(f"Google Drive folder '{info.name}' ({info.id}) has no files.")
             clean_id = info.children[0].id
-        return await resolve_direct_download(clean_id, cookies=self.cookies)
+        return await resolve_direct_download(clean_id, cookies=self.cookies, proxy=self.proxy)
 
     def get_direct_url(self, target: str) -> tuple[str, str, int]:
         """Resolve direct download URL synchronously."""
@@ -82,15 +85,18 @@ class GDriveClient:
         self,
         target: str,
         output_path: str | Path | None = None,
+        proxy: str | None = None,
         concurrency: int | None = None,
         progress_callback: Callable[[int, int], None] | None = None,
     ) -> Path:
         """Download file asynchronously with chunk workers and resume support."""
         workers = concurrency or self.concurrency
+        eff_proxy = get_global_proxy(proxy or self.proxy)
         return await download_file_async(
             target=target,
             output_path=output_path,
             cookies=self.cookies,
+            proxy=eff_proxy,
             concurrency=workers,
             console=self.console,
             progress_callback=progress_callback,
@@ -100,6 +106,7 @@ class GDriveClient:
         self,
         target: str,
         output_path: str | Path | None = None,
+        proxy: str | None = None,
         concurrency: int | None = None,
         progress_callback: Callable[[int, int], None] | None = None,
     ) -> Path:
@@ -108,6 +115,7 @@ class GDriveClient:
             self.download_async(
                 target=target,
                 output_path=output_path,
+                proxy=proxy,
                 concurrency=concurrency,
                 progress_callback=progress_callback,
             )

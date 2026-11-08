@@ -19,6 +19,7 @@ from rich.progress import (
 )
 
 from pixeldrain.api import API_BASE, get_auth_headers
+from sourceforge.config import get_global_proxy
 
 
 @dataclass
@@ -71,8 +72,10 @@ async def download_file_async(
     chunk_size: int = 8 * 1024 * 1024,
     verify_checksum: bool = True,
     console: Console | None = None,
+    proxy: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> Path:
+    eff_proxy = get_global_proxy(proxy)
     con = console or Console()
     if output_path:
         out_p = Path(output_path)
@@ -89,7 +92,7 @@ async def download_file_async(
     base_headers = get_auth_headers(api_key)
 
     if total_bytes <= 0:
-        async with AsyncSession() as session:
+        async with AsyncSession(proxy=eff_proxy) as session:
             probe = await session.get(url, headers=base_headers, stream=True)
             cl = probe.headers.get("content-length")
             total_bytes = int(cl) if cl and cl.isdigit() else 0
@@ -97,7 +100,7 @@ async def download_file_async(
     if total_bytes <= 0:
         con.print("[yellow]Single-stream download (size unknown)...[/yellow]")
         try:
-            async with AsyncSession() as session:
+            async with AsyncSession(proxy=eff_proxy) as session:
                 resp = await session.get(url, headers=base_headers, stream=True)
                 with open(dest, "wb") as f:
                     async for chunk in resp.aiter_content():
@@ -168,7 +171,7 @@ async def download_file_async(
 
         async def worker(worker_id: int) -> None:
             w_task = worker_tasks[worker_id]
-            async with AsyncSession() as session:
+            async with AsyncSession(proxy=eff_proxy) as session:
                 while True:
                     try:
                         chunk_idx, start, end = queue.get_nowait()

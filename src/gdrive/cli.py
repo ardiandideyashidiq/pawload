@@ -44,10 +44,11 @@ def cli(ctx: click.Context, verbose: int) -> None:
     default=None,
     help="Netscape cookies.txt file path or raw cookie string ('SID=...; HSID=...').",
 )
-def info(target: str, cookies: str | None) -> None:
+@click.option("-p", "--proxy", default=None, help="Proxy URL (http://... or socks5h://...).")
+def info(target: str, cookies: str | None, proxy: str | None) -> None:
     """Inspect a Google Drive link or ID (file or folder)."""
     try:
-        client = GDriveClient(cookies=cookies, console=console)
+        client = GDriveClient(cookies=cookies, proxy=proxy, console=console)
         item = client.info(target)
 
         table = Table(title="Google Drive Item Details")
@@ -95,10 +96,11 @@ def info(target: str, cookies: str | None) -> None:
     default=None,
     help="Netscape cookies.txt file path or raw cookie string ('SID=...; HSID=...').",
 )
-def direct_url_cmd(target: str, cookies: str | None) -> None:
+@click.option("-p", "--proxy", default=None, help="Proxy URL (http://... or socks5h://...).")
+def direct_url_cmd(target: str, cookies: str | None, proxy: str | None) -> None:
     """Scrape and resolve the direct download URL for a file or folder."""
     try:
-        client = GDriveClient(cookies=cookies, console=console)
+        client = GDriveClient(cookies=cookies, proxy=proxy, console=console)
         with console.status("[bold green]Resolving direct download link...[/bold green]"):
             url, filename, total_size = client.get_direct_url(target)
 
@@ -130,10 +132,11 @@ def direct_url_cmd(target: str, cookies: str | None) -> None:
     default=None,
     help="Netscape cookies.txt file path or raw cookie string ('SID=...; HSID=...').",
 )
-def list_cmd(target: str, cookies: str | None) -> None:
+@click.option("-p", "--proxy", default=None, help="Proxy URL (http://... or socks5h://...).")
+def list_cmd(target: str, cookies: str | None, proxy: str | None) -> None:
     """List files in a Google Drive folder."""
     try:
-        client = GDriveClient(cookies=cookies, console=console)
+        client = GDriveClient(cookies=cookies, proxy=proxy, console=console)
         items = client.list(target)
 
         if not items:
@@ -176,6 +179,7 @@ def list_cmd(target: str, cookies: str | None) -> None:
     default=None,
     help="Netscape cookies.txt file path or raw cookie string ('SID=...; HSID=...').",
 )
+@click.option("-p", "--proxy", default=None, help="Proxy URL (http://... or socks5h://...).")
 @click.option(
     "-n",
     "--notify/--no-notify",
@@ -196,6 +200,7 @@ def download(
     output: str | None,
     concurrency: int | None,
     cookies: str | None,
+    proxy: str | None,
     notify: bool,
     verbose: int,
 ) -> None:
@@ -207,7 +212,7 @@ def download(
     )
     cb = (lambda delta, tot: reporter.advance(delta, tot)) if reporter else None
     try:
-        client = GDriveClient(cookies=cookies, concurrency=concurrency, console=console)
+        client = GDriveClient(cookies=cookies, proxy=proxy, concurrency=concurrency, console=console)
         dest = client.download(
             target=target,
             output_path=output,

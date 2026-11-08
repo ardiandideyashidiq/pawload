@@ -6,6 +6,7 @@ from pathlib import Path
 
 from rich.console import Console
 
+from sourceforge.config import get_global_proxy
 from vikingfile.api import (
     VikingItem,
     check_file,
@@ -42,12 +43,14 @@ class VikingFileClient:
         user: str | None = None,
         concurrency: int | None = None,
         chunk_size: int | None = None,
+        proxy: str | None = None,
         console: Console | None = None,
     ) -> None:
         cfg = Config.load()
         self.user = user if user is not None else cfg.user
         self.concurrency = concurrency if concurrency is not None else cfg.concurrency
         self.chunk_size = chunk_size if chunk_size is not None else cfg.chunk_size
+        self.proxy = get_global_proxy(proxy)
         self.console = console or Console()
 
     # --- Upload ---
@@ -135,6 +138,7 @@ class VikingFileClient:
                 concurrency=concurrency or self.concurrency,
                 chunk_size=self.chunk_size,
                 console=self.console,
+                proxy=self.proxy,
                 progress_callback=progress_callback,
             )
 

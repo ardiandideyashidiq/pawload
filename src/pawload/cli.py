@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from typing import Any
 
 import rich_click as click
 from rich.console import Console
@@ -50,17 +51,21 @@ def run_interactive_setup(console: Console) -> None:
     console.print(f"[dim]Target config file: {sf_cfg.CONFIG_FILE}[/dim]\n")
 
     # 1. Global settings
-    if Confirm.ask("[bold]Configure global settings (concurrency)?[/bold]", default=True):
+    if Confirm.ask("[bold]Configure global settings (concurrency, proxy)?[/bold]", default=True):
         current_sections = sf_cfg.load_all_sections(config_file=sf_cfg.CONFIG_FILE)
         global_sec = current_sections.get("global", {})
         default_conc = str(global_sec.get("concurrency", 4))
+        default_proxy = str(global_sec.get("proxy", "") or "")
         conc_val = Prompt.ask("Default download concurrency", default=default_conc)
+        proxy_val = Prompt.ask("Default proxy URL (leave blank for direct connection)", default=default_proxy)
         try:
-            sf_cfg.save_section("global", {"concurrency": int(conc_val)}, config_file=sf_cfg.CONFIG_FILE)
+            sec_data: dict[str, Any] = {"concurrency": int(conc_val)}
+            if proxy_val.strip():
+                sec_data["proxy"] = sf_cfg.normalize_proxy(proxy_val.strip())
+            sf_cfg.save_section("global", sec_data, config_file=sf_cfg.CONFIG_FILE)
             console.print("[green][OK] Saved [global][/green]\n")
         except ValueError:
             console.print("[yellow]Invalid integer, skipping global concurrency.[/yellow]\n")
-
     # 2. SourceForge
     if Confirm.ask("[bold]Configure SourceForge?[/bold]", default=True):
         sf_c = sf_cfg.Config.load()
@@ -132,12 +137,21 @@ def run_interactive_setup(console: Console) -> None:
     default=0,
     help="Enable verbose logging (-v for INFO, -vv for DEBUG).",
 )
+@click.option(
+    "-p",
+    "--proxy",
+    default=None,
+    help="Global proxy URL (http://... or socks5h://...).",
+)
 @click.pass_context
-def cli(ctx: click.Context, verbose: int) -> None:
+def cli(ctx: click.Context, verbose: int, proxy: str | None) -> None:
     """Pawload: Unified multi-cloud transfer, scraping, and storage CLI."""
     ctx.ensure_object(dict)
     ctx.obj["verbose"] = verbose
-
+    if proxy:
+        ctx.obj["proxy"] = proxy
+        import os
+        os.environ["PAWLOAD_PROXY"] = proxy
 
 @cli.command(name="setup")
 def setup_cmd() -> None:
@@ -182,6 +196,21 @@ def config_show() -> None:
         else:
             table.add_row(sec_name, str(sec_data))
         console.print(table)
+@config_group.command(name="set-proxy")
+@click.argument("proxy_url", required=False, default="")
+def config_set_proxy(proxy_url: str) -> None:
+    """Set or clear the default global proxy URL in config.toml."""
+    global_sec = sf_cfg.load_section("global", config_file=sf_cfg.CONFIG_FILE)
+    if proxy_url.strip():
+        norm = sf_cfg.normalize_proxy(proxy_url.strip())
+        global_sec["proxy"] = norm
+        sf_cfg.save_section("global", global_sec, config_file=sf_cfg.CONFIG_FILE)
+        Console().print(f"[bold green][OK] Global proxy set to:[/bold green] {norm}")
+    else:
+        global_sec.pop("proxy", None)
+        sf_cfg.save_section("global", global_sec, config_file=sf_cfg.CONFIG_FILE)
+        Console().print("[bold green][OK] Global proxy cleared.[/bold green]")
+
 
 
 # Attach primary service CLIs as subcommands

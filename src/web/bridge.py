@@ -18,7 +18,12 @@ from gofile.api import get_content, get_content_id, parse_content_items
 from gofile.client import GoFileClient
 from pixeldrain.client import PixelDrainClient
 from sourceforge.client import SourceForgeClient
-from sourceforge.config import get_unified_config_file, load_all_sections, save_section
+from sourceforge.config import (
+    get_global_proxy,
+    get_unified_config_file,
+    load_all_sections,
+    save_section,
+)
 from sourceforge.mirrors import fetch_live_mirrors, parse_target
 from telegram.client import TelegramClient
 from telegram.reporter import TelegramProgressReporter
@@ -120,6 +125,7 @@ class WebBridge:
         target = target.strip()
         if not target:
             return {"error": "Empty target URL or path"}
+        get_global_proxy()
 
         # 1. Local file path check
         local_path = Path(target).expanduser()
@@ -390,6 +396,7 @@ class WebBridge:
             if reporter:
                 reporter.update(cumulative_completed, total)
         try:
+            get_global_proxy()
             if provider == "sourceforge":
                 sf = SourceForgeClient()
                 await sf.download_async(

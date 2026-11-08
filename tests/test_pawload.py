@@ -91,7 +91,7 @@ def test_pawload_setup_interactive(tmp_path, monkeypatch):
     # 5. vikingfile -> y, "testhash"
     # 6. telegram -> n
     user_inputs = (
-        "y\n8\n"
+        "y\n8\nsocks5h://127.0.0.1:1080\n"
         "y\ntestuser\ntestproj\n\nautoselect\n"
         "y\ntesttoken\n"
         "y\ntestkey\n"
@@ -107,9 +107,42 @@ def test_pawload_setup_interactive(tmp_path, monkeypatch):
     # Verify persisted values
     sections = sf_cfg.load_all_sections(config_file=cfg_file)
     assert sections["global"]["concurrency"] == 8
-    assert sections["sourceforge"]["username"] == "testuser"
+    assert sections["global"]["proxy"] == "socks5h://127.0.0.1:1080"
     assert sections["sourceforge"]["project"] == "testproj"
     assert sections["gofile"]["token"] == "testtoken"
     assert sections["pixeldrain"]["api_key"] == "testkey"
     assert sections["vikingfile"]["user"] == "testhash"
     assert sections["gdrive"]["cookie_file"] == "my_cookie.txt"
+
+
+def test_pawload_config_set_proxy(tmp_path, monkeypatch):
+    import sourceforge.config as sf_cfg
+
+    cfg_file = tmp_path / "pawload_proxy_cfg.toml"
+    monkeypatch.setattr(sf_cfg, "CONFIG_FILE", cfg_file)
+
+    runner = CliRunner()
+    res = runner.invoke(cli, ["config", "set-proxy", "127.0.0.1:1080"])
+    assert res.exit_code == 0
+    assert "Global proxy set to" in res.output
+    assert "http://127.0.0.1:1080" in res.output
+
+    # Verify saved
+    sec = sf_cfg.load_section("global", config_file=cfg_file)
+    assert sec["proxy"] == "http://127.0.0.1:1080"
+
+    # Clear proxy
+    res_clear = runner.invoke(cli, ["config", "set-proxy", ""])
+    assert res_clear.exit_code == 0
+    assert "Global proxy cleared" in res_clear.output
+    sec_after = sf_cfg.load_section("global", config_file=cfg_file)
+    assert "proxy" not in sec_after
+
+
+def test_pawload_cli_global_proxy_flag(monkeypatch):
+    monkeypatch.delenv("PAWLOAD_PROXY", raising=False)
+    runner = CliRunner()
+    result = runner.invoke(cli, ["--proxy", "socks5h://127.0.0.1:1080", "config", "path"])
+    assert result.exit_code == 0
+    import os
+    assert os.environ.get("PAWLOAD_PROXY") == "socks5h://127.0.0.1:1080"

@@ -9,6 +9,7 @@ from gdrive.client import GDriveClient
 from gofile.client import GoFileClient
 from pixeldrain.client import PixelDrainClient
 from sourceforge.client import SourceForgeClient
+from sourceforge.config import get_global_proxy
 from vikingfile.client import VikingFileClient
 
 __all__ = [
@@ -71,9 +72,11 @@ async def upload_async(
     api_key: str | None = None,
     user: str | None = None,
     force: bool = False,
+    proxy: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> Any:
     """Upload a file asynchronously to the selected provider."""
+    get_global_proxy(proxy)
     path = Path(file_path).expanduser().resolve()
     if not path.is_file():
         raise FileNotFoundError(f"Local file not found: {file_path}")
@@ -133,9 +136,11 @@ def upload(
     api_key: str | None = None,
     user: str | None = None,
     force: bool = False,
+    proxy: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> Any:
     """Upload a file synchronously to the selected provider."""
+    get_global_proxy(proxy)
     return _run_sync(
         upload_async(
             file_path=file_path,
@@ -148,10 +153,10 @@ def upload(
             api_key=api_key,
             user=user,
             force=force,
+            proxy=proxy,
             progress_callback=progress_callback,
         )
     )
-
 
 async def download_async(
     target: str,
@@ -166,9 +171,11 @@ async def download_async(
     api_key: str | None = None,
     cookies: dict[str, str] | str | Path | None = None,
     cookie: str | Path | None = None,
+    proxy: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> Path:
     """Download a file asynchronously with automatic provider detection."""
+    eff_proxy = get_global_proxy(proxy)
     prov = (provider or detect_provider(target)).lower().strip()
 
     if prov in ("sourceforge", "sf"):
@@ -212,7 +219,7 @@ async def download_async(
         )
 
     if prov in ("gdrive", "gd", "googledrive"):
-        gd = GDriveClient(cookies=cookies or cookie, concurrency=concurrency)
+        gd = GDriveClient(cookies=cookies or cookie, proxy=eff_proxy, concurrency=concurrency)
         return await gd.download_async(
             target=target,
             output_path=output_path,
@@ -235,6 +242,7 @@ def download(
     api_key: str | None = None,
     cookies: dict[str, str] | str | Path | None = None,
     cookie: str | Path | None = None,
+    proxy: str | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> Path:
     """Download a file synchronously with automatic provider detection."""
@@ -251,6 +259,7 @@ def download(
             api_key=api_key,
             cookies=cookies,
             cookie=cookie,
+            proxy=proxy,
             progress_callback=progress_callback,
         )
     )
