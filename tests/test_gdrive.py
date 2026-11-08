@@ -53,6 +53,32 @@ def test_load_cookies_from_netscape(tmp_path: Path):
     assert cookies.get("TEST_COOKIE") == "secret_val"
 
 
+def test_load_cookies_raw_string_and_json():
+    # Raw key-value string
+    cookies_kv = load_cookies("SID=test_sid; HSID=test_hsid")
+    assert cookies_kv.get("SID") == "test_sid"
+    assert cookies_kv.get("HSID") == "test_hsid"
+
+    # JSON array
+    json_arr = '[{"name": "AEC", "value": "aec_val"}]'
+    cookies_json = load_cookies(json_arr)
+    assert cookies_json.get("AEC") == "aec_val"
+
+    # Direct dict
+    dict_in = {"NID": "nid_val"}
+    assert load_cookies(dict_in).get("NID") == "nid_val"
+
+
+def test_resolve_direct_download_private_error():
+    mock_resp = AsyncMock()
+    mock_resp.status_code = 401
+    mock_session = AsyncMock()
+    mock_session.get.return_value = mock_resp
+
+    import pytest
+    with pytest.raises(PermissionError, match="requires a valid login cookie"):
+        asyncio.run(resolve_direct_download("private_id", session=mock_session))
+
 def test_gdrive_config_save_and_load(tmp_path: Path, monkeypatch):
     import gdrive.config as gd_cfg
     import sourceforge.config as sf_cfg

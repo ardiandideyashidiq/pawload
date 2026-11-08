@@ -35,11 +35,19 @@ def cli(ctx: click.Context, verbose: int) -> None:
 
 @cli.command()
 @click.argument("target")
-@click.option("-c", "--cookies", help="Path to Netscape cookies.txt file.")
+@click.option(
+    "-k",
+    "--cookies",
+    "--cookie",
+    "--cookie-file",
+    "cookies",
+    default=None,
+    help="Netscape cookies.txt file path or raw cookie string ('SID=...; HSID=...').",
+)
 def info(target: str, cookies: str | None) -> None:
     """Inspect a Google Drive link or ID (file or folder)."""
     try:
-        client = GDriveClient(cookie_file=cookies, console=console)
+        client = GDriveClient(cookies=cookies, console=console)
         item = client.info(target)
 
         table = Table(title="Google Drive Item Details")
@@ -78,11 +86,19 @@ def info(target: str, cookies: str | None) -> None:
 
 @cli.command(name="url")
 @click.argument("target")
-@click.option("-c", "--cookies", help="Path to Netscape cookies.txt file.")
+@click.option(
+    "-k",
+    "--cookies",
+    "--cookie",
+    "--cookie-file",
+    "cookies",
+    default=None,
+    help="Netscape cookies.txt file path or raw cookie string ('SID=...; HSID=...').",
+)
 def direct_url_cmd(target: str, cookies: str | None) -> None:
     """Scrape and resolve the direct download URL for a file or folder."""
     try:
-        client = GDriveClient(cookie_file=cookies, console=console)
+        client = GDriveClient(cookies=cookies, console=console)
         with console.status("[bold green]Resolving direct download link...[/bold green]"):
             url, filename, total_size = client.get_direct_url(target)
 
@@ -105,11 +121,19 @@ def direct_url_cmd(target: str, cookies: str | None) -> None:
 
 @cli.command(name="list")
 @click.argument("target")
-@click.option("-c", "--cookies", help="Path to Netscape cookies.txt file.")
+@click.option(
+    "-k",
+    "--cookies",
+    "--cookie",
+    "--cookie-file",
+    "cookies",
+    default=None,
+    help="Netscape cookies.txt file path or raw cookie string ('SID=...; HSID=...').",
+)
 def list_cmd(target: str, cookies: str | None) -> None:
     """List files in a Google Drive folder."""
     try:
-        client = GDriveClient(cookie_file=cookies, console=console)
+        client = GDriveClient(cookies=cookies, console=console)
         items = client.list(target)
 
         if not items:
@@ -143,7 +167,15 @@ def list_cmd(target: str, cookies: str | None) -> None:
 @click.argument("target")
 @click.option("-o", "--output", help="Destination file path or directory.")
 @click.option("-c", "--concurrency", type=int, default=None, help="Parallel chunk workers.")
-@click.option("--cookies", help="Path to Netscape cookies.txt file.")
+@click.option(
+    "-k",
+    "--cookies",
+    "--cookie",
+    "--cookie-file",
+    "cookies",
+    default=None,
+    help="Netscape cookies.txt file path or raw cookie string ('SID=...; HSID=...').",
+)
 @click.option(
     "-n",
     "--notify/--no-notify",
@@ -175,7 +207,7 @@ def download(
     )
     cb = (lambda delta, tot: reporter.advance(delta, tot)) if reporter else None
     try:
-        client = GDriveClient(cookie_file=cookies, concurrency=concurrency, console=console)
+        client = GDriveClient(cookies=cookies, concurrency=concurrency, console=console)
         dest = client.download(
             target=target,
             output_path=output,

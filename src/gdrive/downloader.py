@@ -69,7 +69,7 @@ class DownloadState:
 async def download_file_async(
     target: str,
     output_path: str | Path | None = None,
-    cookies: dict[str, str] | None = None,
+    cookies: dict[str, str] | str | Path | None = None,
     concurrency: int | None = None,
     chunk_size: int | None = None,
     console: Console | None = None,
@@ -82,7 +82,7 @@ async def download_file_async(
     cfg = Config.load()
     num_workers = concurrency or cfg.concurrency or 4
     c_size = chunk_size or cfg.chunk_size or 8 * 1024 * 1024
-    c = cookies if cookies is not None else load_cookies()
+    c = load_cookies(cookies)
 
     clean_id = extract_gdrive_id(target)
 

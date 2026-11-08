@@ -41,13 +41,14 @@ class GDriveClient:
     def __init__(
         self,
         cookie_file: str | Path | None = None,
-        cookies: dict[str, str] | None = None,
+        cookies: dict[str, str] | str | Path | None = None,
         concurrency: int | None = None,
         console: Console | None = None,
     ) -> None:
         cfg = Config.load()
-        self.cookie_file = str(cookie_file) if cookie_file else cfg.cookie_file
-        self.cookies = cookies if cookies is not None else load_cookies(self.cookie_file)
+        cookie_src = cookies if cookies is not None else cookie_file
+        self.cookie_file = str(cookie_src) if cookie_src and not isinstance(cookie_src, dict) else cfg.cookie_file
+        self.cookies = load_cookies(cookie_src) if cookie_src is not None else load_cookies(self.cookie_file)
         self.concurrency = concurrency or cfg.concurrency or 4
         self.console = console or Console()
 

@@ -164,6 +164,8 @@ async def download_async(
     verify_checksum: bool = True,
     token: str | None = None,
     api_key: str | None = None,
+    cookies: dict[str, str] | str | Path | None = None,
+    cookie: str | Path | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> Path:
     """Download a file asynchronously with automatic provider detection."""
@@ -210,7 +212,7 @@ async def download_async(
         )
 
     if prov in ("gdrive", "gd", "googledrive"):
-        gd = GDriveClient(concurrency=concurrency)
+        gd = GDriveClient(cookies=cookies or cookie, concurrency=concurrency)
         return await gd.download_async(
             target=target,
             output_path=output_path,
@@ -231,6 +233,8 @@ def download(
     verify_checksum: bool = True,
     token: str | None = None,
     api_key: str | None = None,
+    cookies: dict[str, str] | str | Path | None = None,
+    cookie: str | Path | None = None,
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> Path:
     """Download a file synchronously with automatic provider detection."""
@@ -245,6 +249,8 @@ def download(
             verify_checksum=verify_checksum,
             token=token,
             api_key=api_key,
+            cookies=cookies,
+            cookie=cookie,
             progress_callback=progress_callback,
         )
     )

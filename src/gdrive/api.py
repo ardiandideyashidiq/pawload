@@ -46,13 +46,82 @@ def extract_gdrive_id(url_or_id: str) -> str:
     return clean
 
 
-def load_cookies(cookie_file: str | Path | None = None) -> dict[str, str]:
-    """Load cookies from a Netscape format cookie file or path."""
+def parse_cookie_string(raw: str) -> dict[str, str]:
+    """Parse raw cookie header string ('k=v; k2=v2') or JSON format."""
+    raw = raw.strip()
+    if not raw:
+        return {}
+    if raw.startswith(("[", "{")):
+        try:
+            data = json.loads(raw)
+            if isinstance(data, list):
+                return {
+                    item["name"]: item["value"]
+                    for item in data
+                    if isinstance(item, dict) and "name" in item and "value" in item
+                }
+            if isinstance(data, dict):
+                return {str(k): str(v) for k, v in data.items()}
+        except Exception:
+            pass
+    cookies: dict[str, str] = {}
+    if ";" in raw or "=" in raw:
+        for item in raw.split(";"):
+            item = item.strip()
+            if "=" in item:
+                k, v = item.split("=", 1)
+                cookies[k.strip()] = v.strip()
+    return cookies
+
+
+def load_cookies(
+    cookie_input: dict[str, str] | str | Path | None = None,
+) -> dict[str, str]:
+    """
+    Load Google cookies from:
+    1. A dictionary of cookies
+    2. A raw cookie string ("SID=...; HSID=..." or JSON format)
+    3. A Netscape / JSON cookie file path
+    4. Environment variables (GDRIVE_COOKIE, GDRIVE_COOKIES, GDRIVE_COOKIE_FILE, PAWLOAD_COOKIE)
+    5. Config or default cookie.txt location
+    """
+    import os
+
+    if isinstance(cookie_input, dict):
+        return dict(cookie_input)
+
+    # 1. Check if cookie_input is a direct raw string (contains '=' or JSON and not an existing file)
+    if isinstance(cookie_input, str):
+        clean_str = cookie_input.strip()
+        p = Path(clean_str).expanduser()
+        if not p.is_file() and ("=" in clean_str or clean_str.startswith(("[", "{"))):
+            parsed = parse_cookie_string(clean_str)
+            if parsed:
+                return parsed
+
+    # 2. Check if cookie_input is an existing file
     target_path: Path | None = None
-    if cookie_file:
-        p = Path(cookie_file).expanduser()
+    if cookie_input:
+        p = Path(cookie_input).expanduser()
         if p.is_file():
             target_path = p
+
+    # 3. Check environment variables
+    if not target_path:
+        env_cookie = (
+            os.environ.get("GDRIVE_COOKIE")
+            or os.environ.get("GDRIVE_COOKIES")
+            or os.environ.get("PAWLOAD_COOKIE")
+        )
+        if env_cookie:
+            parsed = parse_cookie_string(env_cookie)
+            if parsed:
+                return parsed
+        env_file = os.environ.get("GDRIVE_COOKIE_FILE") or os.environ.get("PAWLOAD_COOKIE_FILE")
+        if env_file and Path(env_file).expanduser().is_file():
+            target_path = Path(env_file).expanduser()
+
+    # 4. Check config and default candidate locations
     if not target_path:
         cfg = Config.load()
         if cfg.cookie_file and Path(cfg.cookie_file).is_file():
@@ -66,22 +135,30 @@ def load_cookies(cookie_file: str | Path | None = None) -> dict[str, str]:
     try:
         cj = http.cookiejar.MozillaCookieJar(str(target_path))
         cj.load(ignore_discard=True, ignore_expires=True)
-        return {c.name: c.value for c in cj if "google.com" in c.domain or not c.domain}
+        res = {c.name: c.value for c in cj if "google.com" in c.domain or not c.domain}
+        if res:
+            return res
     except Exception:
-        # Fallback manual parser for non-standard lines
-        cookies = {}
-        try:
-            for line in target_path.read_text(errors="ignore").splitlines():
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                parts = line.split("\t")
-                if len(parts) >= 7:
-                    cookies[parts[5]] = parts[6]
-        except Exception:
-            pass
-        return cookies
+        pass
 
+    try:
+        content = target_path.read_text(errors="ignore").strip()
+        parsed = parse_cookie_string(content)
+        if parsed:
+            return parsed
+
+        # Fallback tab-separated Netscape parser
+        cookies = {}
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) >= 7:
+                cookies[parts[5]] = parts[6]
+        return cookies
+    except Exception:
+        return {}
 
 def extract_filename_from_cd(cd: str) -> str | None:
     """Extract filename from Content-Disposition header."""
@@ -118,12 +195,26 @@ async def resolve_direct_download(
 
         # Follow redirects and form confirmations (up to 5 steps)
         for _ in range(5):
+            if "accounts.google.com" in current_url:
+                raise PermissionError(
+                    f"Google Drive item '{file_id}' requires login authentication. "
+                    "Please provide cookies via --cookie / --cookie-file, GDRIVE_COOKIE env, or config."
+                )
             resp = await s.get(current_url, stream=True, allow_redirects=False)
+            if resp.status_code in (401, 403):
+                raise PermissionError(
+                    f"Access denied (HTTP {resp.status_code}) for Google Drive item '{file_id}'. "
+                    "The file is private and requires a valid login cookie."
+                )
             if resp.status_code in (301, 302, 303, 307, 308):
                 current_url = resp.headers["location"]
+                if "accounts.google.com" in current_url:
+                    raise PermissionError(
+                        f"Google Drive item '{file_id}' requires login authentication. "
+                        "Please provide cookies via --cookie / --cookie-file, GDRIVE_COOKIE env, or config."
+                    )
                 final_url = current_url
                 continue
-
             ct = resp.headers.get("content-type", "").lower()
             if "text/html" in ct:
                 chunks = []
@@ -210,7 +301,14 @@ async def inspect_target_async(
         # Check folder page first
         folder_url = f"https://drive.google.com/drive/folders/{clean_id}"
         resp = await session.get(folder_url, allow_redirects=True)
-
+        if resp.status_code in (401, 403) or "accounts.google.com" in resp.url:
+            view_url = f"https://drive.google.com/file/d/{clean_id}/view"
+            view_resp = await session.get(view_url, allow_redirects=True)
+            if view_resp.status_code in (401, 403) or "accounts.google.com" in view_resp.url:
+                raise PermissionError(
+                    f"Google Drive item '{clean_id}' is private and requires login authentication. "
+                    "Please provide valid cookies via --cookie / --cookie-file, GDRIVE_COOKIE env, or config."
+                )
         is_folder = (
             "application/vnd.google-apps.folder" in resp.text
             or "window['_DRIVE_ivd']" in resp.text
