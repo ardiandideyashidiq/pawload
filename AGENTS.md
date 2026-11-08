@@ -11,6 +11,7 @@ Comprehensive developer guidelines, architecture overview, and code conventions 
 - **GoFile**: Chunked multipart streaming uploads, folder browsing, guest token windowing, and multi-threaded downloads.
 - **PixelDrain**: Direct uploads, chunked downloads, metadata checks, and list management.
 - **VikingFile**: Account/anonymous file uploads, direct chunked downloads, and file checks.
+- **Google Drive**: Folder and file scraping, multi-step virus scan bypass token negotiation, session cookie authentication (`--cookies`), and parallel chunked downloads with stateful resume.
 - **Telegram**: Real-time progress reporter (`TelegramProgressReporter`) and interactive bot runner (`aiogram`).
 - **Web GUI**: Embedded Flask backend with Server-Sent Events (SSE) streaming and a React 19 / Tailwind CSS v4 dashboard.
 
@@ -24,18 +25,19 @@ Comprehensive developer guidelines, architecture overview, and code conventions 
                       │  detect_provider(), upload/download  │
                       └──────────────────┬───────────────────┘
                                          │
-        ┌───────────────┬────────────────┼────────────────┬────────────────┐
-        ▼               ▼                ▼                ▼                ▼
-┌───────────────┐┌──────────────┐┌──────────────┐┌───────────────┐ ┌───────────────┐
-│  sourceforge  ││    gofile    ││  pixeldrain  ││  vikingfile   │ │   telegram    │
-│  (SFTP, HTTP) ││ (REST HTTP)  ││ (REST HTTP)  ││  (REST HTTP)  │ │(aiogram, REST)│
-└───────┬───────┘└──────┬───────┘└──────┬───────┘└──────┬────────┘ └───────┬───────┘
-        └───────────────┼────────────────┼──────────────┼──────────────────┘
-                        ▼                ▼              ▼
-                      ┌──────────────────────────────────────┐
-                      │          web / GUI Bridge            │
-                      │  AsyncLoopThread, Flask REST & SSE   │
-                      └──────────────────────────────────────┘
+        ┌───────────┬───────────┬────────────┬────────────┬───────────┬───────────┐
+        ▼           ▼           ▼            ▼            ▼           ▼           ▼
+┌───────────┐┌───────────┐┌───────────┐┌────────────┐┌───────────┐┌───────────┐┌───────────┐
+│sourceforge││  gofile   ││pixeldrain ││ vikingfile ││  gdrive   ││ telegram  ││  web/GUI  │
+│(SFTP,HTTP)││(REST HTTP)││(REST HTTP)││(REST HTTP) ││(REST HTTP)││ (aiogram) ││(Flask/SSE)│
+└───────────┘└───────────┘└───────────┘└────────────┘└───────────┘└───────────┘└─────┬─────┘
+        │           │           │            │            │                         │
+        └───────────┴───────────┴────────────┴────────────┴────────────┐            │
+                                                                       ▼            ▼
+                                                             ┌──────────────────────┐
+                                                             │   web / GUI Bridge   │
+                                                             │ Flask REST & SSE     │
+                                                             └──────────────────────┘
                                          │ (SSE + REST)
                                          ▼
                       ┌──────────────────────────────────────┐
@@ -70,6 +72,7 @@ Comprehensive developer guidelines, architecture overview, and code conventions 
 │   ├── gofile/         # GoFile REST client, token management, chunked downloader, streaming uploader
 │   ├── pixeldrain/     # PixelDrain client, uploader, chunked downloader, API helpers
 │   ├── vikingfile/     # VikingFile client, uploader, chunked downloader, API helpers
+│   ├── gdrive/         # Google Drive client, scraper, chunked downloader, cookie manager
 │   ├── telegram/       # Telegram Bot client (curl_cffi), reporter, aiogram bot daemon
 │   └── web/            # Flask REST API, WebBridge background runner, and embedded dist/ assets
 ├── frontend/           # React 19, TypeScript, Tailwind CSS v4, Radix UI single-page application
@@ -147,6 +150,7 @@ Target strings and URLs are mapped to appropriate providers via `detect_provider
 - `gf:<id>` or `*gofile.io*` -> `gofile`
 - `pd:<id>` or `*pixeldrain.com*` -> `pixeldrain`
 - `vf:<hash>` or `*vikingfile.com*` -> `vikingfile`
+- `gd:<id>`, `*drive.google.com*`, or `*docs.google.com*` -> `gdrive`
 - `sf:<proj>/<path>`, `*sourceforge.net*`, or `<proj>/<path>` -> `sourceforge`
 
 ### 3. File Descriptor & Worker Safety
@@ -173,7 +177,7 @@ Console and Telegram message outputs use standardized bracketed ASCII tags:
 
 - `src/pawload/__init__.py`: Public SDK root exporting clients (`SourceForgeClient`, `GoFileClient`, etc.) and top-level transfer functions (`upload`, `download`).
 - `src/pawload/api.py`: Provider auto-detection and high-level sync/async upload/download dispatchers.
-- `src/pawload/cli.py`: Click command group with shorthand aliases (`gf`, `sf`, `pd`, `vf`, `tg`, `gui`) and interactive `pawload setup`.
+- `src/pawload/cli.py`: Click command group with shorthand aliases (`gf`, `sf`, `pd`, `vf`, `gd`, `tg`, `gui`) and interactive `pawload setup`.
 - `src/sourceforge/config.py`: Unified TOML configuration resolver (`get_unified_config_file()`, `load_section()`, `save_section()`).
 - `src/web/bridge.py`: `WebBridge` orchestrating transfers between Flask, provider coroutines, and SSE subscribers.
 - `src/web/app.py`: Flask app factory, REST API endpoints, and static SPA serving.
@@ -204,5 +208,5 @@ Console and Telegram message outputs use standardized bracketed ASCII tags:
   - CLI subcommands tested via `click.testing.CliRunner`.
   - Asynchronous functions tested inside regular test functions using `asyncio.run()`.
 - **Pre-commit / Verification Expectation**:
-  - All 64 tests in `tests/` must pass cleanly without network flakiness.
+  - All 76 tests in `tests/` must pass cleanly without network flakiness.
   - When editing `frontend/`, always re-run `bun run build` inside `frontend/` to keep `src/web/dist` in sync with TypeScript source files.
