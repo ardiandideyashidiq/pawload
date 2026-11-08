@@ -28,6 +28,8 @@ vikingfile = "vikingfile:main"
 vf = "vikingfile:main"
 pixeldrain = "pixeldrain:main"
 pd = "pixeldrain:main"
+gdrive = "gdrive:main"
+gd = "gdrive:main"
 telegram = "telegram:main"
 tg = "telegram:main"
 web = "web:main"
@@ -46,5 +48,5 @@ dev = [
 ignore = ["BLE001", "ASYNC230", "S324", "S110", "SIM115"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/pawload", "src/sourceforge", "src/gofile", "src/vikingfile", "src/pixeldrain", "src/telegram", "src/web"]
+packages = ["src/pawload", "src/sourceforge", "src/gofile", "src/vikingfile", "src/pixeldrain", "src/gdrive", "src/telegram", "src/web"]
 

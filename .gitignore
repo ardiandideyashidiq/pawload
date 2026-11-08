@@ -19,3 +19,4 @@ tmp/
 # Frontend node_modules & caches
 frontend/node_modules/
 frontend/.vite/
+cookie.txt

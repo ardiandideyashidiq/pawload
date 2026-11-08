@@ -53,14 +53,18 @@ def test_vikingfile_get_server_live():
     assert "vikingfile" in server
 
 
-def test_vikingfile_check_file_live():
+@patch("vikingfile.api.requests.post")
+def test_vikingfile_check_file_live(mock_post):
+    mock_post.return_value.status_code = 200
+    mock_post.return_value.json.return_value = [{
+        "exist": True, "name": "AGENTS.md", "size": 1234, "hash": "QL0UByzja9"
+    }]
     info = check_file("QL0UByzja9")
     assert info is not None
     assert info.exist is True
     assert info.name == "AGENTS.md"
     assert info.size > 0
     assert info.hash == "QL0UByzja9"
-
 
 def test_vikingfile_cli_help():
     runner = CliRunner()
@@ -72,13 +76,17 @@ def test_vikingfile_cli_help():
     assert "download" in result.output
 
 
-def test_vikingfile_cli_check_command_live():
+@patch("vikingfile.api.requests.post")
+def test_vikingfile_cli_check_command_live(mock_post):
+    mock_post.return_value.status_code = 200
+    mock_post.return_value.json.return_value = [{
+        "exist": True, "name": "AGENTS.md", "size": 1234, "hash": "QL0UByzja9"
+    }]
     runner = CliRunner()
     result = runner.invoke(cli, ["check", "QL0UByzja9"])
     assert result.exit_code == 0
     assert "AGENTS.md" in result.output
     assert "QL0UByzja9" in result.output
-
 
 def test_vikingfile_cli_interrupt():
     runner = CliRunner()

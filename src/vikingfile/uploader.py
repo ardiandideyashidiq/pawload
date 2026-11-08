@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+
 from curl_cffi import requests
 from curl_cffi.curl import CurlMime
 from rich.console import Console

@@ -51,24 +51,20 @@ def upload_file(
     parts_bytes = bytearray()
     if token:
         parts_bytes.extend(
-            f'--{boundary}\r\nContent-Disposition: form-data; name="token"\r\n\r\n{token}\r\n'.encode(
-                "utf-8"
-            )
+            f'--{boundary}\r\nContent-Disposition: form-data; name="token"\r\n\r\n{token}\r\n'.encode()
         )
     if folder_id:
         parts_bytes.extend(
-            f'--{boundary}\r\nContent-Disposition: form-data; name="folderId"\r\n\r\n{folder_id}\r\n'.encode(
-                "utf-8"
-            )
+            f'--{boundary}\r\nContent-Disposition: form-data; name="folderId"\r\n\r\n{folder_id}\r\n'.encode()
         )
 
     file_header = (
         f'--{boundary}\r\n'
         f'Content-Disposition: form-data; name="file"; filename="{path.name}"\r\n'
         f"Content-Type: application/octet-stream\r\n\r\n"
-    ).encode("utf-8")
+    ).encode()
     parts_bytes.extend(file_header)
-    footer = f"\r\n--{boundary}--\r\n".encode("utf-8")
+    footer = f"\r\n--{boundary}--\r\n".encode()
 
     content_length = len(parts_bytes) + total_size + len(footer)
 
@@ -109,7 +105,7 @@ def upload_file(
         c.setopt(CurlOpt.POSTFIELDSIZE_LARGE, content_length)
         c.setopt(
             CurlOpt.HTTPHEADER,
-            [f"Content-Type: multipart/form-data; boundary={boundary}".encode("utf-8")],
+            [f"Content-Type: multipart/form-data; boundary={boundary}".encode()],
         )
         c.setopt(CurlOpt.READFUNCTION, read_stream)
         c.setopt(

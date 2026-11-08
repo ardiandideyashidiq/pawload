@@ -54,6 +54,7 @@ def dump_toml(data: dict[str, Any]) -> str:
         "gofile",
         "vikingfile",
         "pixeldrain",
+        "gdrive",
         "telegram",
     ]
     remaining = [k for k in data if k not in preferred_order]

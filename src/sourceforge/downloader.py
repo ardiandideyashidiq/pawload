@@ -28,7 +28,6 @@ def get_expected_md5(project: str, remote_path: str) -> str | None:
     clean_path = remote_path.strip().lstrip("/")
     parts = clean_path.split("/")
     remote_dir = "/".join(parts[:-1]) if len(parts) > 1 else ""
-    target_name = parts[-1]
 
     rss_url = f"https://sourceforge.net/projects/{project}/rss?path=/{remote_dir}"
     try:

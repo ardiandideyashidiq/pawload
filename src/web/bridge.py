@@ -189,6 +189,27 @@ class WebBridge:
                 logger.debug(f"Pixeldrain inspect error: {e}")
                 return {"provider": "pixeldrain", "name": target, "error": str(e)}
 
+        # 4.5 Google Drive check
+        if (
+            "drive.google.com" in target
+            or "docs.google.com" in target
+            or target.startswith(("gd:", "gdrive:"))
+        ):
+            try:
+                from gdrive.client import GDriveClient
+
+                gd_client = GDriveClient()
+                g_item = gd_client.info(target)
+                return {
+                    "provider": "gdrive",
+                    "name": g_item.name,
+                    "size": g_item.size,
+                    "is_folder": g_item.is_folder,
+                    "id": g_item.id,
+                }
+            except Exception as e:
+                logger.debug(f"GDrive inspect error: {e}")
+                return {"provider": "gdrive", "name": target, "error": str(e)}
         # 5. SourceForge check
         if (
             "sourceforge.net" in target
@@ -399,6 +420,16 @@ class WebBridge:
             elif provider == "pixeldrain":
                 pd = PixelDrainClient()
                 await pd.download_async(
+                    target=target,
+                    output_path=dest_file,
+                    concurrency=concurrency,
+                    progress_callback=progress_cb,
+                )
+            elif provider == "gdrive":
+                from gdrive.client import GDriveClient
+
+                gd = GDriveClient()
+                await gd.download_async(
                     target=target,
                     output_path=dest_file,
                     concurrency=concurrency,

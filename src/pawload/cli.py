@@ -7,11 +7,13 @@ from rich.console import Console
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
+import gdrive.config as gd_cfg
 import gofile.config as gf_cfg
 import pixeldrain.config as pd_cfg
 import sourceforge.config as sf_cfg
 import telegram.config as tg_cfg
 import vikingfile.config as vf_cfg
+from gdrive.cli import cli as gdrive_cli
 from gofile.cli import cli as gofile_cli
 from pixeldrain.cli import cli as pixeldrain_cli
 from sourceforge.cli import cli as sourceforge_cli
@@ -26,6 +28,7 @@ ALIASES: dict[str, click.Command] = {
     "pd": pixeldrain_cli,
     "sf": sourceforge_cli,
     "vf": vikingfile_cli,
+    "gd": gdrive_cli,
     "tg": telegram_cli,
     "gui": web_cli,
 }
@@ -96,7 +99,15 @@ def run_interactive_setup(console: Console) -> None:
         vf_c.save()
         console.print("[green][OK] Saved [vikingfile][/green]\n")
 
-    # 6. Telegram Notifications
+    # 6. Google Drive
+    if Confirm.ask("[bold]Configure Google Drive?[/bold]", default=True):
+        gd_c = gd_cfg.Config.load()
+        cookie_file = Prompt.ask("Path to cookies.txt (optional)", default=gd_c.cookie_file or "")
+        gd_c.cookie_file = cookie_file.strip()
+        gd_c.save()
+        console.print("[green][OK] Saved [gdrive][/green]\n")
+
+    # 7. Telegram Notifications
     if Confirm.ask("[bold]Configure Telegram Bot & Notifications?[/bold]", default=False):
         tg_c = tg_cfg.Config.load()
         bot_tok = Prompt.ask("Telegram bot token", default=tg_c.bot_token or "")
@@ -178,5 +189,6 @@ cli.add_command(gofile_cli, name="gofile")
 cli.add_command(pixeldrain_cli, name="pixeldrain")
 cli.add_command(sourceforge_cli, name="sourceforge")
 cli.add_command(vikingfile_cli, name="vikingfile")
+cli.add_command(gdrive_cli, name="gdrive")
 cli.add_command(telegram_cli, name="telegram")
 cli.add_command(web_cli, name="web")

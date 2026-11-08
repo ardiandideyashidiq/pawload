@@ -15,9 +15,9 @@ def test_pawload_cli_help():
     assert "pixeldrain" in result.output
     assert "sourceforge" in result.output
     assert "vikingfile" in result.output
+    assert "gdrive" in result.output
     assert "telegram" in result.output
     assert "web" in result.output
-
 
 def test_pawload_subcommands_and_aliases():
     runner = CliRunner()
@@ -45,6 +45,10 @@ def test_pawload_subcommands_and_aliases():
     res_vf = runner.invoke(cli, ["vf", "--help"])
     assert res_vf.exit_code == 0
     assert "VikingFile CLI" in res_vf.output
+    # gdrive alias
+    res_gd = runner.invoke(cli, ["gd", "--help"])
+    assert res_gd.exit_code == 0
+    assert "Google Drive CLI" in res_gd.output
 
     # telegram alias
     res_tg = runner.invoke(cli, ["tg", "--help"])
@@ -65,19 +69,19 @@ def test_pawload_config_path(tmp_path, monkeypatch):
 
 
 def test_pawload_setup_interactive(tmp_path, monkeypatch):
+    import gdrive.config as gd_cfg
     import gofile.config as gf_cfg
     import pixeldrain.config as pd_cfg
     import sourceforge.config as sf_cfg
     import telegram.config as tg_cfg
     import vikingfile.config as vf_cfg
-
     cfg_file = tmp_path / "pawload_config.toml"
     monkeypatch.setattr(sf_cfg, "CONFIG_FILE", cfg_file)
     monkeypatch.setattr(gf_cfg, "CONFIG_FILE", cfg_file)
     monkeypatch.setattr(pd_cfg, "CONFIG_FILE", cfg_file)
     monkeypatch.setattr(vf_cfg, "CONFIG_FILE", cfg_file)
+    monkeypatch.setattr(gd_cfg, "CONFIG_FILE", cfg_file)
     monkeypatch.setattr(tg_cfg, "CONFIG_FILE", cfg_file)
-
     runner = CliRunner()
     # Provide inputs for:
     # 1. global concurrency -> y, "8"
@@ -86,14 +90,15 @@ def test_pawload_setup_interactive(tmp_path, monkeypatch):
     # 4. pixeldrain -> y, "testkey"
     # 5. vikingfile -> y, "testhash"
     # 6. telegram -> n
-    user_inputs = "\n".join([
-        "y", "8",
-        "y", "testuser", "testproj", "", "autoselect",
-        "y", "testtoken",
-        "y", "testkey",
-        "y", "testhash",
-        "n",
-    ]) + "\n"
+    user_inputs = (
+        "y\n8\n"
+        "y\ntestuser\ntestproj\n\nautoselect\n"
+        "y\ntesttoken\n"
+        "y\ntestkey\n"
+        "y\ntesthash\n"
+        "y\nmy_cookie.txt\n"
+        "n\n"
+    )
 
     result = runner.invoke(cli, ["setup"], input=user_inputs)
     assert result.exit_code == 0
@@ -107,3 +112,4 @@ def test_pawload_setup_interactive(tmp_path, monkeypatch):
     assert sections["gofile"]["token"] == "testtoken"
     assert sections["pixeldrain"]["api_key"] == "testkey"
     assert sections["vikingfile"]["user"] == "testhash"
+    assert sections["gdrive"]["cookie_file"] == "my_cookie.txt"

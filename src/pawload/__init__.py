@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import sys
 
+from rich.console import Console
+
 # Provider Clients & Core APIs
+from gdrive.api import GDriveItem
+from gdrive.client import GDriveClient
 from gofile.client import GoFileClient
 from gofile.uploader import UploadResult as GoFileUploadResult
 from pawload.api import (
@@ -15,9 +19,10 @@ from pawload.api import (
 from pawload.cli import cli
 from pixeldrain.client import PixelDrainClient
 from pixeldrain.uploader import UploadResult as PixelDrainUploadResult
-from rich.console import Console
 from sourceforge.client import SourceForgeClient
-from sourceforge.downloader import download_file_async as download_sourceforge_file_async
+from sourceforge.downloader import (
+    download_file_async as download_sourceforge_file_async,
+)
 from sourceforge.mirrors import (
     Mirror,
     TargetInfo,
@@ -33,6 +38,8 @@ from vikingfile.client import VikingFileClient
 from vikingfile.uploader import UploadResult as VikingFileUploadResult
 
 __all__ = [
+    "GDriveClient",
+    "GDriveItem",
     "GoFileClient",
     "GoFileUploadResult",
     "Mirror",

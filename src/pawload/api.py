@@ -5,6 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from gdrive.client import GDriveClient
 from gofile.client import GoFileClient
 from pixeldrain.client import PixelDrainClient
 from sourceforge.client import SourceForgeClient
@@ -28,6 +29,12 @@ def detect_provider(target: str) -> str:
         return "pixeldrain"
     if clean.startswith("vf:") or "vikingfile.com" in clean or "vik1ngfile.com" in clean:
         return "vikingfile"
+    if (
+        clean.startswith(("gd:", "gdrive:"))
+        or "drive.google.com" in clean
+        or "docs.google.com" in clean
+    ):
+        return "gdrive"
     if (
         clean.startswith("sf:")
         or "sourceforge.net" in clean
@@ -202,6 +209,14 @@ async def download_async(
             progress_callback=progress_callback,
         )
 
+    if prov in ("gdrive", "gd", "googledrive"):
+        gd = GDriveClient(concurrency=concurrency)
+        return await gd.download_async(
+            target=target,
+            output_path=output_path,
+            concurrency=concurrency,
+            progress_callback=progress_callback,
+        )
     raise ValueError(f"Could not determine download provider for target: '{target}'")
 
 

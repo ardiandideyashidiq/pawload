@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
-import pytest
 
 import pawload
 from pawload import (
+    GDriveClient,
     GoFileClient,
     PixelDrainClient,
     SourceForgeClient,
@@ -25,6 +25,7 @@ from pawload import (
 def test_sdk_imports():
     """Verify that all core symbols can be imported directly from the top-level pawload package."""
     assert pawload.SourceForgeClient is SourceForgeClient
+    assert pawload.GDriveClient is GDriveClient
     assert pawload.GoFileClient is GoFileClient
     assert pawload.PixelDrainClient is PixelDrainClient
     assert pawload.VikingFileClient is VikingFileClient
@@ -45,10 +46,11 @@ def test_detect_provider():
     assert detect_provider("pd:xyz999") == "pixeldrain"
     assert detect_provider("https://vikingfile.com/f/hash123") == "vikingfile"
     assert detect_provider("vf:hash123") == "vikingfile"
+    assert detect_provider("https://drive.google.com/open?id=1mcRTM4UuJm31mt0RzS18Z3_KsAK2Mv2x") == "gdrive"
+    assert detect_provider("gd:1mcRTM4UuJm31mt0RzS18Z3_KsAK2Mv2x") == "gdrive"
     assert detect_provider("https://downloads.sourceforge.net/project/p/f.zip") == "sourceforge"
     assert detect_provider("sf:myproject/release/app.exe") == "sourceforge"
     assert detect_provider("myproject/release/app.exe") == "sourceforge"
-
 
 def test_unified_upload_dispatch(tmp_path: Path):
     dummy_file = tmp_path / "test_artifact.bin"
@@ -125,6 +127,12 @@ def test_unified_download_dispatch(tmp_path: Path):
         assert res == out_file
         mock_vf.assert_called_once()
 
+    # Auto-detect Google Drive
+    with patch("gdrive.client.GDriveClient.download_async", new_callable=AsyncMock) as mock_gd:
+        mock_gd.return_value = out_file
+        res = download("gd:12asPt3gTnvJNdiusf225ey_rOhuHskhE", output_path=out_file)
+        assert res == out_file
+        mock_gd.assert_called_once()
 
 def test_unified_async_download(tmp_path: Path):
     import asyncio
